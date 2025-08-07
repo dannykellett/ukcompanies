@@ -1,6 +1,7 @@
 """Core async client for UK Companies API."""
 
 import re
+from collections.abc import Callable
 from datetime import datetime
 from typing import Any
 
@@ -8,6 +9,7 @@ import httpx
 import structlog
 
 from .auth import AuthHandler
+from .client_endpoints import EndpointMixin, RetryMixin
 from .config import Config
 from .exceptions import (
     AuthenticationError,
@@ -23,14 +25,16 @@ from .models.rate_limit import RateLimitInfo
 logger = structlog.get_logger(__name__)
 
 
-class AsyncClient:
+class AsyncClient(EndpointMixin, RetryMixin):
     """Async client for interacting with the Companies House API."""
 
     # Company number validation patterns
     COMPANY_NUMBER_PATTERN = re.compile(r"^[0-9A-Z]{8}$")
     COMPANY_NUMBER_NUMERIC = re.compile(r"^[0-9]{7,8}$")
 
-    def __init__(self, api_key: str | None = None, config: Config | None = None, **kwargs: Any) -> None:
+    def __init__(
+        self, api_key: str | None = None, config: Config | None = None, **kwargs: Any
+    ) -> None:
         """Initialize the async client.
 
         Args:
@@ -213,7 +217,7 @@ class AsyncClient:
         else:
             raise CompaniesHouseError(f"API error: {message}", status_code=status)
 
-    async def _request(
+    async def _request_without_retry(
         self,
         method: str,
         path: str,
@@ -281,6 +285,38 @@ class AsyncClient:
             logger.error("Unexpected error", error=str(e), path=path)
             raise CompaniesHouseError(f"Unexpected error: {str(e)}")
 
+    async def _request(
+        self,
+        method: str,
+        path: str,
+        params: dict[str, Any] | None = None,
+        json: dict[str, Any] | None = None,
+        on_retry: Callable[[int, Exception], None] | None = None,
+        **kwargs: Any,
+    ) -> httpx.Response:
+        """Make an HTTP request with optional retry logic.
+
+        Args:
+            method: HTTP method
+            path: API endpoint path
+            params: Query parameters
+            json: JSON body data
+            on_retry: Optional callback for retry events
+            **kwargs: Additional arguments
+
+        Returns:
+            HTTP response object
+        """
+        # Use retry logic if configured
+        if self.config.max_retries > 0:
+            return await self._request_with_retry(
+                method, path, params=params, json=json, on_retry=on_retry, **kwargs
+            )
+        else:
+            return await self._request_without_retry(
+                method, path, params=params, json=json, **kwargs
+            )
+
     async def get(
         self, path: str, params: dict[str, Any] | None = None, **kwargs: Any
     ) -> dict[str, Any]:
@@ -297,7 +333,9 @@ class AsyncClient:
         response = await self._request("GET", path, params=params, **kwargs)
         return response.json()  # type: ignore[no-any-return]
 
-    async def post(self, path: str, json: dict[str, Any] | None = None, **kwargs: Any) -> dict[str, Any]:
+    async def post(
+        self, path: str, json: dict[str, Any] | None = None, **kwargs: Any
+    ) -> dict[str, Any]:
         """Make a POST request to the API.
 
         Args:

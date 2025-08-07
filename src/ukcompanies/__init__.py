@@ -12,7 +12,14 @@ from .exceptions import (
     ServerError,
     ValidationError,
 )
-from .models import Address, BaseModel, RateLimitInfo
+from .models import (
+    Address,
+    BaseModel,
+    Company,
+    CompanySearchResult,
+    OfficerSearchResult,
+    RateLimitInfo,
+)
 
 __version__ = "0.1.0"
 
@@ -25,6 +32,9 @@ __all__ = [
     # Models
     "BaseModel",
     "Address",
+    "Company",
+    "CompanySearchResult",
+    "OfficerSearchResult",
     "RateLimitInfo",
     # Exceptions
     "CompaniesHouseError",
