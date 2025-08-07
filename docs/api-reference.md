@@ -1,0 +1,113 @@
+# API Reference
+
+## CompaniesHouseClient
+
+The main client class for interacting with the Companies House API.
+
+### Initialization
+
+```python
+from ukcompanies import CompaniesHouseClient
+
+client = CompaniesHouseClient(
+    api_key="your-api-key",  # Optional if set in environment
+    base_url="https://api.company-information.service.gov.uk",  # Optional, uses default
+    timeout=30.0,  # Optional, request timeout in seconds
+)
+```
+
+### Methods
+
+#### search_companies
+
+Search for companies by name or number.
+
+```python
+async def search_companies(
+    query: str,
+    items_per_page: int = 20,
+    start_index: int = 0
+) -> List[CompanySearchResult]
+```
+
+**Parameters:**
+- `query` (str): The search query
+- `items_per_page` (int): Number of results per page (default: 20, max: 100)
+- `start_index` (int): Index of the first result (default: 0)
+
+**Returns:**
+- List of `CompanySearchResult` objects
+
+#### get_company
+
+Get detailed information about a specific company.
+
+```python
+async def get_company(company_number: str) -> CompanyProfile
+```
+
+**Parameters:**
+- `company_number` (str): The company number
+
+**Returns:**
+- `CompanyProfile` object with full company details
+
+## Models
+
+### CompanySearchResult
+
+Represents a company in search results.
+
+**Attributes:**
+- `company_number` (str): The company registration number
+- `company_name` (str): The company name
+- `company_status` (str): Current status (e.g., "active", "dissolved")
+- `company_type` (str): Type of company
+- `date_of_creation` (date): Date of incorporation
+- `registered_office_address` (Address): Registered office location
+
+### CompanyProfile
+
+Detailed company information.
+
+**Attributes:**
+- All attributes from `CompanySearchResult`
+- `sic_codes` (List[str]): Standard Industrial Classification codes
+- `previous_company_names` (List[PreviousName]): Historical names
+- `accounts` (Accounts): Accounting reference dates
+- `confirmation_statement` (ConfirmationStatement): Annual confirmation details
+
+### Address
+
+Company address information.
+
+**Attributes:**
+- `address_line_1` (str): First line of address
+- `address_line_2` (str, optional): Second line of address
+- `locality` (str): City or town
+- `postal_code` (str): Postal/ZIP code
+- `country` (str): Country
+
+## Error Handling
+
+The SDK raises specific exceptions for different error scenarios:
+
+```python
+from ukcompanies.exceptions import (
+    CompaniesHouseAPIError,
+    RateLimitError,
+    AuthenticationError,
+    NotFoundError,
+)
+
+try:
+    company = await client.get_company("12345678")
+except NotFoundError:
+    print("Company not found")
+except RateLimitError:
+    print("Rate limit exceeded, please wait")
+except AuthenticationError:
+    print("Invalid API key")
+except CompaniesHouseAPIError as e:
+    print(f"API error: {e}")
+```
