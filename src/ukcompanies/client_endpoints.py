@@ -11,6 +11,8 @@ from .exceptions import RateLimitError, ServerError, ValidationError
 from .models import Address, Company
 from .models.appointment import AppointmentList
 from .models.disqualification import DisqualificationList
+from .models.document import Document, DocumentContent, DocumentFormat, DocumentMetadata
+from .models.filing import FilingCategory, FilingHistoryList, FilingTransaction
 from .models.officer import OfficerList
 from .models.search import AllSearchResult, CompanySearchResult, OfficerSearchResult
 
@@ -371,6 +373,242 @@ class EndpointMixin:
             return await self.get_disqualified_corporate(officer_id)
         else:
             return await self.get_disqualified_natural(officer_id)
+
+    async def filing_history(
+        self,
+        company_number: str,
+        category: FilingCategory | str | None = None,
+        items_per_page: int = 25,
+        start_index: int = 0,
+    ) -> FilingHistoryList:
+        """Get filing history for a company.
+
+        Args:
+            company_number: Company registration number
+            category: Optional filing category filter
+            items_per_page: Number of items per page (max 100)
+            start_index: Starting index for pagination
+
+        Returns:
+            FilingHistoryList with filing history items
+
+        Raises:
+            ValidationError: If company number is invalid
+            NotFoundError: If company doesn't exist
+        """
+        # Validate and normalize company number
+        normalized = self.validate_company_number(company_number)
+
+        params = {
+            "items_per_page": min(items_per_page, 100),
+            "start_index": start_index,
+        }
+
+        # Add category filter if provided
+        if category:
+            # Convert enum to string if needed
+            if isinstance(category, FilingCategory):
+                params["category"] = category.value
+            else:
+                params["category"] = category
+
+        response = await self.get(f"/company/{normalized}/filing-history", params=params)
+        return FilingHistoryList(**response)
+
+    async def filing_transaction(
+        self,
+        company_number: str,
+        transaction_id: str,
+    ) -> FilingTransaction:
+        """Get details of a specific filing transaction.
+
+        Args:
+            company_number: Company registration number
+            transaction_id: Unique filing transaction identifier
+
+        Returns:
+            FilingTransaction with detailed filing information
+
+        Raises:
+            ValidationError: If company number or transaction ID is invalid
+            NotFoundError: If company or transaction doesn't exist
+        """
+        # Validate and normalize company number
+        normalized = self.validate_company_number(company_number)
+
+        # Validate transaction ID
+        if not transaction_id or not transaction_id.strip():
+            raise ValidationError("Transaction ID cannot be empty")
+
+        clean_id = transaction_id.strip()
+
+        response = await self.get(f"/company/{normalized}/filing-history/{clean_id}")
+        return FilingTransaction(**response)
+
+    async def document(self, document_id: str) -> Document:
+        """Get document metadata.
+
+        Args:
+            document_id: Unique document identifier
+
+        Returns:
+            Document with metadata and available formats
+
+        Raises:
+            ValidationError: If document ID is invalid
+            NotFoundError: If document doesn't exist
+        """
+        # Validate document ID
+        if not document_id or not document_id.strip():
+            raise ValidationError("Document ID cannot be empty")
+
+        clean_id = document_id.strip()
+
+        response = await self.get(f"/document/{clean_id}")
+
+        # Parse response to DocumentMetadata first
+        metadata = DocumentMetadata(**response)
+
+        # Convert to Document model
+        return Document.from_metadata(clean_id, metadata)
+
+    async def document_content(
+        self,
+        document_id: str,
+        format: DocumentFormat | str | None = None,
+    ) -> DocumentContent:
+        """Get document content in specified format.
+
+        Args:
+            document_id: Unique document identifier
+            format: Desired document format (PDF, XHTML, JSON, etc.)
+
+        Returns:
+            DocumentContent with actual document data
+
+        Raises:
+            ValidationError: If document ID is invalid
+            NotFoundError: If document doesn't exist
+        """
+        # Validate document ID
+        if not document_id or not document_id.strip():
+            raise ValidationError("Document ID cannot be empty")
+
+        clean_id = document_id.strip()
+
+        # Set Accept header based on format
+        headers = {}
+        if format:
+            # Convert enum to string if needed
+            if isinstance(format, DocumentFormat):
+                headers["Accept"] = format.value
+            else:
+                headers["Accept"] = format
+
+        # Make the request directly with _request to handle binary content
+        response = await self._request(
+            "GET",
+            f"/document/{clean_id}/content",
+            headers=headers,
+        )
+
+        # Extract content based on content type
+        content_type = response.headers.get("content-type", "")
+
+        # Create DocumentContent based on response type
+        if "application/pdf" in content_type:
+            # Binary content for PDFs
+            return DocumentContent(
+                document_id=clean_id,
+                content_type=DocumentFormat.PDF,
+                content=response.content,
+                content_length=len(response.content),
+                etag=response.headers.get("etag"),
+            )
+        elif "application/json" in content_type:
+            # JSON content
+            return DocumentContent(
+                document_id=clean_id,
+                content_type=DocumentFormat.JSON,
+                text_content=response.text,
+                content_length=len(response.text),
+                etag=response.headers.get("etag"),
+            )
+        elif "text/csv" in content_type:
+            # CSV content
+            return DocumentContent(
+                document_id=clean_id,
+                content_type=DocumentFormat.CSV,
+                text_content=response.text,
+                content_length=len(response.text),
+                etag=response.headers.get("etag"),
+            )
+        elif "application/xhtml" in content_type or "text/html" in content_type:
+            # XHTML/HTML content
+            return DocumentContent(
+                document_id=clean_id,
+                content_type=DocumentFormat.XHTML,
+                text_content=response.text,
+                content_length=len(response.text),
+                etag=response.headers.get("etag"),
+            )
+        else:
+            # Default to text content
+            return DocumentContent(
+                document_id=clean_id,
+                content_type=DocumentFormat.XML if "xml" in content_type else DocumentFormat.XHTML,
+                text_content=response.text,
+                content_length=len(response.text),
+                etag=response.headers.get("etag"),
+            )
+
+    async def filing_history_pages(
+        self,
+        company_number: str,
+        category: FilingCategory | str | None = None,
+        per_page: int = 25,
+        max_pages: int | None = None,
+    ) -> AsyncGenerator[FilingHistoryList, None]:
+        """Get filing history for a company, yielding page by page.
+
+        Args:
+            company_number: Company registration number
+            category: Optional filing category filter
+            per_page: Number of results per page (max 100)
+            max_pages: Maximum number of pages to fetch (None for all)
+
+        Yields:
+            FilingHistoryList for each page of results
+        """
+        start_index = 0
+        page_count = 0
+        items_per_page = min(per_page, 100)
+
+        while True:
+            # Check if we've reached the max pages limit
+            if max_pages and page_count >= max_pages:
+                break
+
+            # Fetch the current page
+            result = await self.filing_history(
+                company_number, category, items_per_page, start_index
+            )
+            yield result
+
+            page_count += 1
+
+            # Check if there are more pages
+            total_items = result.total_count
+            fetched_items = start_index + len(result.items)
+
+            if fetched_items >= total_items:
+                break
+
+            # Update start index for next page
+            start_index = fetched_items
+
+            # Small delay between pages to be respectful
+            await asyncio.sleep(0.1)
 
 
 class RetryMixin:
