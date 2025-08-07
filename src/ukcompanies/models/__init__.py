@@ -1,6 +1,7 @@
 """Models package for UK Companies API client."""
 
 from .address import Address
+from .appointment import Appointment, AppointmentList, CompanyStatus as AppointmentCompanyStatus
 from .base import BaseModel
 from .company import (
     AccountingReference,
@@ -10,6 +11,19 @@ from .company import (
     CompanyType,
     ConfirmationStatement,
     Jurisdiction,
+)
+from .disqualification import (
+    Disqualification,
+    DisqualificationItem,
+    DisqualificationList,
+    DisqualificationReason,
+)
+from .officer import (
+    IdentificationType,
+    Officer,
+    OfficerList,
+    OfficerRole,
+    PartialDate,
 )
 from .rate_limit import RateLimitInfo
 from .search import (
@@ -35,6 +49,21 @@ __all__ = [
     "AccountingReference",
     "ConfirmationStatement",
     "Accounts",
+    # Officer
+    "Officer",
+    "OfficerList",
+    "OfficerRole",
+    "IdentificationType",
+    "PartialDate",
+    # Appointment
+    "Appointment",
+    "AppointmentList",
+    "AppointmentCompanyStatus",
+    # Disqualification
+    "Disqualification",
+    "DisqualificationItem",
+    "DisqualificationList",
+    "DisqualificationReason",
     # Search
     "SearchResult",
     "CompanySearchResult",
