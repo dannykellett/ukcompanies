@@ -7,8 +7,11 @@ from typing import Any
 
 import structlog
 
-from .exceptions import RateLimitError, ServerError
+from .exceptions import RateLimitError, ServerError, ValidationError
 from .models import Address, Company
+from .models.appointment import AppointmentList
+from .models.disqualification import DisqualificationList
+from .models.officer import OfficerList
 from .models.search import AllSearchResult, CompanySearchResult, OfficerSearchResult
 
 logger = structlog.get_logger(__name__)
@@ -171,6 +174,172 @@ class EndpointMixin:
         response = await self.get(f"/company/{normalized}/registered-office-address")
         return Address(**response)
 
+    async def get_officers(
+        self,
+        company_number: str,
+        items_per_page: int = 35,
+        start_index: int = 0,
+        register_type: str | None = None,
+        order_by: str | None = None,
+    ) -> OfficerList:
+        """Get list of officers for a company.
+
+        Args:
+            company_number: Company registration number
+            items_per_page: Number of items per page (max 50)
+            start_index: Starting index for pagination
+            register_type: Type of register (directors, secretaries, llp-members)
+            order_by: Field to order by (appointed_on, resigned_on, surname)
+
+        Returns:
+            OfficerList with company officers
+
+        Raises:
+            ValidationError: If company number is invalid
+            NotFoundError: If company doesn't exist
+        """
+        # Validate and normalize company number
+        normalized = self.validate_company_number(company_number)
+
+        params = {
+            "items_per_page": min(items_per_page, 50),
+            "start_index": start_index,
+        }
+
+        if register_type:
+            params["register_type"] = register_type
+        if order_by:
+            params["order_by"] = order_by
+
+        response = await self.get(f"/company/{normalized}/officers", params=params)
+        return OfficerList(**response)
+
+    async def get_appointments(
+        self,
+        officer_id: str,
+        items_per_page: int = 50,
+        start_index: int = 0,
+    ) -> AppointmentList:
+        """Get all appointments for a specific officer.
+
+        Args:
+            officer_id: Unique officer identifier
+            items_per_page: Number of items per page (max 50)
+            start_index: Starting index for pagination
+
+        Returns:
+            AppointmentList with all officer appointments
+
+        Raises:
+            ValidationError: If officer ID is invalid
+            NotFoundError: If officer doesn't exist
+        """
+        # Validate officer ID
+        if not officer_id or not officer_id.strip():
+            raise ValidationError("Officer ID cannot be empty")
+
+        # Clean the officer ID
+        clean_id = officer_id.strip()
+
+        params = {
+            "items_per_page": min(items_per_page, 50),
+            "start_index": start_index,
+        }
+
+        response = await self.get(f"/officers/{clean_id}/appointments", params=params)
+        return AppointmentList(**response)
+
+    async def get_disqualified_natural(
+        self, officer_id: str
+    ) -> DisqualificationList:
+        """Get disqualification details for a natural person.
+
+        Args:
+            officer_id: Unique officer identifier
+
+        Returns:
+            DisqualificationList with disqualification details
+
+        Raises:
+            ValidationError: If officer ID is invalid
+            NotFoundError: If officer doesn't exist or has no disqualifications
+        """
+        # Validate officer ID
+        if not officer_id or not officer_id.strip():
+            raise ValidationError("Officer ID cannot be empty")
+
+        # Clean the officer ID
+        clean_id = officer_id.strip()
+
+        response = await self.get(f"/disqualified-officers/natural/{clean_id}")
+        return DisqualificationList(**response)
+
+    async def get_disqualified_corporate(
+        self, officer_id: str
+    ) -> DisqualificationList:
+        """Get disqualification details for a corporate officer.
+
+        Args:
+            officer_id: Unique officer identifier
+
+        Returns:
+            DisqualificationList with disqualification details
+
+        Raises:
+            ValidationError: If officer ID is invalid
+            NotFoundError: If officer doesn't exist or has no disqualifications
+        """
+        # Validate officer ID
+        if not officer_id or not officer_id.strip():
+            raise ValidationError("Officer ID cannot be empty")
+
+        # Clean the officer ID
+        clean_id = officer_id.strip()
+
+        response = await self.get(f"/disqualified-officers/corporate/{clean_id}")
+        return DisqualificationList(**response)
+
+    async def get_appointments_pages(
+        self,
+        officer_id: str,
+        per_page: int = 50,
+        max_pages: int | None = None,
+    ) -> AsyncGenerator[AppointmentList, None]:
+        """Get all appointments for an officer, yielding page by page.
+
+        Args:
+            officer_id: Unique officer identifier
+            per_page: Number of results per page (max 50)
+            max_pages: Maximum number of pages to fetch (None for all)
+
+        Yields:
+            AppointmentList for each page of results
+        """
+        start_index = 0
+        page_count = 0
+        items_per_page = min(per_page, 50)
+
+        while True:
+            # Check if we've reached the max pages limit
+            if max_pages and page_count >= max_pages:
+                break
+
+            # Fetch the current page
+            result = await self.get_appointments(officer_id, items_per_page, start_index)
+            yield result
+
+            page_count += 1
+
+            # Check if there are more pages
+            if not result.has_more_pages:
+                break
+
+            # Update start index for next page
+            start_index = result.next_start_index
+
+            # Small delay between pages to be respectful
+            await asyncio.sleep(0.1)
+
     # Convenience aliases
     async def profile(self, company_number: str) -> Company:
         """Alias for get_company."""
@@ -179,6 +348,29 @@ class EndpointMixin:
     async def address(self, company_number: str) -> Address:
         """Alias for get_company_address."""
         return await self.get_company_address(company_number)
+
+    async def officers(self, company_number: str, **kwargs: Any) -> OfficerList:
+        """Alias for get_officers."""
+        return await self.get_officers(company_number, **kwargs)
+
+    async def appointments(self, officer_id: str, **kwargs: Any) -> AppointmentList:
+        """Alias for get_appointments."""
+        return await self.get_appointments(officer_id, **kwargs)
+
+    async def disqualified(self, officer_id: str, corporate: bool = False) -> DisqualificationList:
+        """Get disqualification details for an officer.
+
+        Args:
+            officer_id: Unique officer identifier
+            corporate: Whether this is a corporate officer
+
+        Returns:
+            DisqualificationList with disqualification details
+        """
+        if corporate:
+            return await self.get_disqualified_corporate(officer_id)
+        else:
+            return await self.get_disqualified_natural(officer_id)
 
 
 class RetryMixin:
