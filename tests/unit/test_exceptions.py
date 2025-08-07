@@ -1,5 +1,9 @@
 """Unit tests for exceptions module."""
 
+from datetime import datetime, timezone
+from unittest.mock import MagicMock
+
+import httpx
 import pytest
 
 from ukcompanies.exceptions import (
@@ -55,21 +59,95 @@ class TestRateLimitError:
         assert error.message == "Rate limit exceeded"
         assert error.status_code == 429
         assert error.retry_after is None
-        assert error.remaining is None
-        assert error.limit is None
+        assert error.rate_limit_remain is None
+        assert error.rate_limit_limit is None
+        assert error.rate_limit_reset is None
     
-    def test_with_retry_metadata(self):
-        """Test with retry metadata."""
+    def test_with_retry_after(self):
+        """Test with retry_after value."""
+        error = RateLimitError(retry_after=60.5)
+        assert "retry after 60.5 seconds" in error.message
+        assert error.retry_after == 60.5
+    
+    def test_with_reset_time(self):
+        """Test with rate_limit_reset datetime."""
+        from datetime import timedelta
+        future_time = datetime.now(timezone.utc).replace(microsecond=0) + timedelta(seconds=30)
+        error = RateLimitError(rate_limit_reset=future_time)
+        assert "resets in" in error.message
+        assert error.rate_limit_reset == future_time
+    
+    def test_with_all_metadata(self):
+        """Test with all retry metadata."""
+        reset_time = datetime.now(timezone.utc)
         error = RateLimitError(
             message="Custom message",
-            retry_after=60,
-            remaining=0,
-            limit=600
+            retry_after=60.0,
+            rate_limit_remain=0,
+            rate_limit_limit=600,
+            rate_limit_reset=reset_time
         )
-        assert error.message == "Custom message"
-        assert error.retry_after == 60
-        assert error.remaining == 0
-        assert error.limit == 600
+        assert "retry after 60.0 seconds" in error.message
+        assert error.retry_after == 60.0
+        assert error.rate_limit_remain == 0
+        assert error.rate_limit_limit == 600
+        assert error.rate_limit_reset == reset_time
+    
+    def test_from_response_with_headers(self):
+        """Test creating from response with rate limit headers."""
+        future_timestamp = int(datetime.now(timezone.utc).timestamp()) + 60
+        response = MagicMock(spec=httpx.Response)
+        response.headers = {
+            "X-Ratelimit-Remain": "10",
+            "X-Ratelimit-Limit": "600",
+            "X-Ratelimit-Reset": str(future_timestamp),
+        }
+        
+        error = RateLimitError.from_response(response)
+        assert error.rate_limit_remain == 10
+        assert error.rate_limit_limit == 600
+        assert error.rate_limit_reset is not None
+        assert error.retry_after is not None
+        assert error.retry_after > 0
+    
+    def test_from_response_missing_headers(self):
+        """Test creating from response without rate limit headers."""
+        response = MagicMock(spec=httpx.Response)
+        response.headers = {}
+        
+        error = RateLimitError.from_response(response)
+        assert error.message == "Rate limit exceeded"
+        assert error.rate_limit_remain is None
+        assert error.rate_limit_limit is None
+        assert error.rate_limit_reset is None
+        assert error.retry_after is None
+    
+    def test_from_response_invalid_headers(self):
+        """Test creating from response with invalid headers."""
+        response = MagicMock(spec=httpx.Response)
+        response.headers = {
+            "X-Ratelimit-Remain": "not-a-number",
+            "X-Ratelimit-Limit": "invalid",
+            "X-Ratelimit-Reset": "bad-timestamp",
+        }
+        
+        error = RateLimitError.from_response(response)
+        assert error.rate_limit_remain is None
+        assert error.rate_limit_limit is None
+        assert error.rate_limit_reset is None
+        assert error.retry_after is None
+    
+    def test_from_response_past_reset_time(self):
+        """Test creating from response with past reset time."""
+        past_timestamp = int(datetime.now(timezone.utc).timestamp()) - 60
+        response = MagicMock(spec=httpx.Response)
+        response.headers = {
+            "X-Ratelimit-Reset": str(past_timestamp),
+        }
+        
+        error = RateLimitError.from_response(response)
+        assert error.rate_limit_reset is not None
+        assert error.retry_after is None  # Past time, no retry_after
 
 
 class TestNotFoundError:
