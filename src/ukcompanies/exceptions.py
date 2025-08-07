@@ -4,6 +4,12 @@ This module defines custom exceptions for handling various error scenarios
 when interacting with the Companies House API.
 """
 
+from datetime import datetime, timezone
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    import httpx
+
 
 class CompaniesHouseError(Exception):
     """Base exception for all Companies House API errors."""
@@ -34,22 +40,82 @@ class RateLimitError(CompaniesHouseError):
     def __init__(
         self,
         message: str = "Rate limit exceeded",
-        retry_after: int | None = None,
-        remaining: int | None = None,
-        limit: int | None = None,
+        retry_after: float | None = None,
+        rate_limit_remain: int | None = None,
+        rate_limit_limit: int | None = None,
+        rate_limit_reset: datetime | None = None,
     ) -> None:
         """Initialize rate limit error.
 
         Args:
             message: Error message
             retry_after: Seconds to wait before retrying
-            remaining: Remaining requests in current window
-            limit: Total request limit for the window
+            rate_limit_remain: Remaining requests in current window
+            rate_limit_limit: Total request limit for the window
+            rate_limit_reset: Datetime when rate limit resets
         """
+        # Include retry info in message if available
+        if retry_after is not None:
+            message = f"{message} (retry after {retry_after:.1f} seconds)"
+        elif rate_limit_reset is not None:
+            wait_seconds = (rate_limit_reset - datetime.now(timezone.utc)).total_seconds()
+            if wait_seconds > 0:
+                message = f"{message} (resets in {wait_seconds:.1f} seconds)"
+        
         super().__init__(message, status_code=429)
         self.retry_after = retry_after
-        self.remaining = remaining
-        self.limit = limit
+        self.rate_limit_remain = rate_limit_remain
+        self.rate_limit_limit = rate_limit_limit
+        self.rate_limit_reset = rate_limit_reset
+    
+    @classmethod
+    def from_response(cls, response: "httpx.Response") -> "RateLimitError":
+        """Create RateLimitError from HTTP response.
+        
+        Args:
+            response: HTTP response with 429 status
+        
+        Returns:
+            RateLimitError with rate limit information
+        """
+        headers = response.headers
+        
+        # Extract rate limit information from headers
+        rate_limit_remain = None
+        if "X-Ratelimit-Remain" in headers:
+            try:
+                rate_limit_remain = int(headers["X-Ratelimit-Remain"])
+            except (ValueError, TypeError):
+                pass
+        
+        rate_limit_limit = None
+        if "X-Ratelimit-Limit" in headers:
+            try:
+                rate_limit_limit = int(headers["X-Ratelimit-Limit"])
+            except (ValueError, TypeError):
+                pass
+        
+        rate_limit_reset = None
+        retry_after = None
+        if "X-Ratelimit-Reset" in headers:
+            try:
+                reset_timestamp = int(headers["X-Ratelimit-Reset"])
+                rate_limit_reset = datetime.fromtimestamp(reset_timestamp, tz=timezone.utc)
+                # Calculate retry_after from reset time
+                current_time = datetime.now(timezone.utc)
+                wait_seconds = (rate_limit_reset - current_time).total_seconds()
+                if wait_seconds > 0:
+                    retry_after = wait_seconds
+            except (ValueError, TypeError):
+                pass
+        
+        return cls(
+            message="Rate limit exceeded",
+            retry_after=retry_after,
+            rate_limit_remain=rate_limit_remain,
+            rate_limit_limit=rate_limit_limit,
+            rate_limit_reset=rate_limit_reset,
+        )
 
 
 class NotFoundError(CompaniesHouseError):
