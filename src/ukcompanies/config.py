@@ -18,6 +18,13 @@ DEFAULT_MAX_RETRIES = 3
 RATE_LIMIT_WINDOW = 300  # 5 minutes in seconds
 RATE_LIMIT_MAX_REQUESTS = 600  # Max requests per window
 
+# Retry configuration defaults
+DEFAULT_AUTO_RETRY = True
+DEFAULT_BACKOFF_STRATEGY = "exponential"
+BASE_DELAY = 1.0  # seconds
+MAX_DELAY = 60.0  # seconds
+JITTER_RANGE = 1.0  # seconds
+
 
 class Config(BaseModel):
     """Configuration for the Companies House API client."""

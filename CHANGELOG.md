@@ -5,10 +5,62 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.1.0] - 2024-01-08
+## [Unreleased]
 
 ### Added
-- Initial project setup with uv package manager
+- Retry logic with exponential and fixed backoff strategies (Story 1.6)
+- Configurable retry parameters (auto_retry, max_retries, backoff)
+- Optional on_retry callback for monitoring retry attempts
+- Enhanced RateLimitError with retry metadata
+
+## [0.5.0] - 2025-01-08
+
+### Added
+- Filing history endpoint with pagination support (Story 1.5)
+- Filing transaction details endpoint
+- Document metadata retrieval endpoint
+- Document content download with multiple format support (PDF, XHTML, JSON, CSV)
+- FilingHistory and Document models with comprehensive validation
+- Async generator support for paginated filing history
+- Binary content handling for PDF documents
+- Streaming support for large documents
+
+## [0.4.0] - 2025-01-07
+
+### Added
+- Officers endpoint for listing company officers
+- Officer appointments endpoint
+- Disqualified officers check endpoint
+- Persons with significant control (PSC) endpoints
+- Insolvency details endpoint
+- Company charges endpoint
+- Comprehensive officer and PSC models
+
+## [0.3.0] - 2025-01-06
+
+### Added
+- Search endpoints for companies and officers (Story 1.3)
+- Combined search_all endpoint with pagination
+- Company profile endpoint
+- Registered office address endpoint
+- Search result models with pagination support
+- Company and address models
+
+## [0.2.0] - 2025-01-05
+
+### Added
+- Core AsyncClient with httpx integration (Story 1.2)
+- HTTP Basic Auth with API key authentication
+- Base Pydantic models for response validation
+- Custom exception hierarchy (CompaniesHouseError, AuthenticationError, RateLimitError, etc.)
+- Rate limit information extraction from headers
+- Configuration module with constants
+- Comprehensive unit test structure with respx mocking
+
+## [0.1.0] - 2025-01-04
+
+### Added
+- Initial project setup with uv package manager (Story 1.1)
 - Basic project structure following modern Python best practices
 - Configuration for development tools (ruff, mypy, pytest)
 - Documentation structure with MkDocs

@@ -9,8 +9,15 @@ import httpx
 import structlog
 
 from .auth import AuthHandler
-from .client_endpoints import EndpointMixin, RetryMixin
-from .config import Config
+from .client_endpoints import EndpointMixin
+from .config import (
+    BASE_DELAY,
+    DEFAULT_AUTO_RETRY,
+    DEFAULT_BACKOFF_STRATEGY,
+    JITTER_RANGE,
+    MAX_DELAY,
+    Config,
+)
 from .exceptions import (
     AuthenticationError,
     CompaniesHouseError,
@@ -21,11 +28,12 @@ from .exceptions import (
     ValidationError,
 )
 from .models.rate_limit import RateLimitInfo
+from .retry import RetryConfig, RetryManager
 
 logger = structlog.get_logger(__name__)
 
 
-class AsyncClient(EndpointMixin, RetryMixin):
+class AsyncClient(EndpointMixin):
     """Async client for interacting with the Companies House API."""
 
     # Company number validation patterns
@@ -33,13 +41,24 @@ class AsyncClient(EndpointMixin, RetryMixin):
     COMPANY_NUMBER_NUMERIC = re.compile(r"^[0-9]{7,8}$")
 
     def __init__(
-        self, api_key: str | None = None, config: Config | None = None, **kwargs: Any
+        self,
+        api_key: str | None = None,
+        config: Config | None = None,
+        auto_retry: bool = DEFAULT_AUTO_RETRY,
+        max_retries: int | None = None,
+        backoff: str = DEFAULT_BACKOFF_STRATEGY,
+        on_retry: Callable | None = None,
+        **kwargs: Any
     ) -> None:
         """Initialize the async client.
 
         Args:
             api_key: API key for authentication (overrides config)
             config: Configuration object (uses env if not provided)
+            auto_retry: Whether to automatically retry on rate limit
+            max_retries: Maximum number of retry attempts
+            backoff: Backoff strategy ("exponential" or "fixed")
+            on_retry: Optional callback for retry events
             **kwargs: Additional config parameters
         """
         # Build configuration
@@ -53,6 +72,18 @@ class AsyncClient(EndpointMixin, RetryMixin):
             if api_key:
                 kwargs["api_key"] = api_key
             self.config = Config.from_env(**kwargs)
+        
+        # Set up retry configuration
+        self.retry_config = RetryConfig(
+            auto_retry=auto_retry,
+            max_retries=max_retries if max_retries is not None else self.config.max_retries,
+            backoff=backoff,
+            base_delay=BASE_DELAY,
+            max_delay=MAX_DELAY,
+            jitter_range=JITTER_RANGE,
+            on_retry=on_retry,
+        )
+        self.retry_manager = RetryManager(self.retry_config)
 
         # Initialize authentication
         self.auth = AuthHandler(self.config.api_key)
@@ -204,12 +235,8 @@ class AsyncClient(EndpointMixin, RetryMixin):
         elif status == 404:
             raise NotFoundError(f"Resource not found: {message}")
         elif status == 429:
-            # Extract rate limit info for retry
-            retry_after = response.headers.get("Retry-After")
-            raise RateLimitError(
-                message=f"Rate limit exceeded: {message}",
-                retry_after=int(retry_after) if retry_after else None,
-            )
+            # Use RateLimitError.from_response to extract all headers
+            raise RateLimitError.from_response(response)
         elif status == 400:
             raise ValidationError(f"Invalid request: {message}")
         elif 500 <= status < 600:
@@ -291,7 +318,6 @@ class AsyncClient(EndpointMixin, RetryMixin):
         path: str,
         params: dict[str, Any] | None = None,
         json: dict[str, Any] | None = None,
-        on_retry: Callable[[int, Exception], None] | None = None,
         **kwargs: Any,
     ) -> httpx.Response:
         """Make an HTTP request with optional retry logic.
@@ -301,16 +327,15 @@ class AsyncClient(EndpointMixin, RetryMixin):
             path: API endpoint path
             params: Query parameters
             json: JSON body data
-            on_retry: Optional callback for retry events
             **kwargs: Additional arguments
 
         Returns:
             HTTP response object
         """
         # Use retry logic if configured
-        if self.config.max_retries > 0:
-            return await self._request_with_retry(
-                method, path, params=params, json=json, on_retry=on_retry, **kwargs
+        if self.retry_config.auto_retry:
+            return await self.retry_manager.execute_with_retry(
+                self._request_without_retry, method, path, params=params, json=json, **kwargs
             )
         else:
             return await self._request_without_retry(
