@@ -38,7 +38,7 @@ class IdentificationType(str, Enum):
 
 class PartialDate(BaseModel):
     """Privacy-compliant date with only month and year.
-    
+
     This is used for officer date of birth to comply with privacy requirements.
     The API returns only month and year for privacy reasons.
     """
@@ -78,30 +78,30 @@ class Officer(BaseModel):
     # Identification
     name: str = Field(..., description="Officer's full name")
     officer_id: str | None = Field(None, description="Unique officer identifier")
-    
+
     # Role and appointment
     officer_role: OfficerRole = Field(..., description="Officer's role in the company")
     appointed_on: date | None = Field(None, description="Date officer was appointed")
     resigned_on: date | None = Field(None, description="Date officer resigned")
-    
+
     # Personal details (privacy-compliant)
     date_of_birth: PartialDate | None = Field(
-        None, 
+        None,
         description="Month and year of birth only (privacy-compliant)"
     )
     nationality: str | None = Field(None, description="Officer's nationality")
     country_of_residence: str | None = Field(None, description="Country of residence")
     occupation: str | None = Field(None, description="Officer's occupation")
-    
+
     # Corporate officer details
     identification: dict | None = Field(
-        None, 
+        None,
         description="Corporate identification details"
     )
-    
+
     # Address
     address: Address | None = Field(None, description="Service address")
-    
+
     # Links
     links: dict | None = Field(None, description="API links for related resources")
 
@@ -141,7 +141,7 @@ class OfficerList(BaseModel):
     start_index: int | None = Field(None, description="Starting index for pagination")
     total_results: int | None = Field(None, description="Total number of results")
     resigned_count: int | None = Field(None, description="Number of resigned officers")
-    
+
     # Links for pagination
     links: dict | None = Field(None, description="Links for pagination")
 
@@ -152,7 +152,7 @@ class OfficerList(BaseModel):
             return False
         if self.items_per_page is None:
             return False
-        
+
         current_end = self.start_index + len(self.items)
         return current_end < self.total_results
 

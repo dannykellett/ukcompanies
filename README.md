@@ -22,22 +22,21 @@ pip install ukcompanies
 
 ```python
 import asyncio
-from ukcompanies import CompaniesHouseClient
+from ukcompanies import AsyncClient
 
 async def main():
     # Initialize the client with your API key
-    client = CompaniesHouseClient(api_key="your-api-key")
-    
-    # Search for companies
-    results = await client.search_companies("OpenAI")
-    
-    for company in results:
-        print(f"{company.company_name} - {company.company_number}")
-    
-    # Get detailed company information
-    company = await client.get_company("12345678")
-    print(f"Company: {company.company_name}")
-    print(f"Status: {company.company_status}")
+    async with AsyncClient(api_key="your-api-key") as client:
+        # Search for companies
+        results = await client.search_companies("OpenAI")
+        
+        for company in results.items:
+            print(f"{company.title} - {company.company_number}")
+        
+        # Get detailed company information
+        company = await client.profile("12345678")
+        print(f"Company: {company.company_name}")
+        print(f"Status: {company.company_status}")
 
 asyncio.run(main())
 ```
@@ -67,10 +66,10 @@ COMPANIES_HOUSE_API_KEY=your-api-key-here
 The SDK automatically handles rate limits with intelligent retry logic. You can customize retry behavior:
 
 ```python
-from ukcompanies import CompaniesHouseClient
+from ukcompanies import AsyncClient
 
 # Custom retry configuration
-client = CompaniesHouseClient(
+async with AsyncClient(
     api_key="your-api-key",
     auto_retry=True,        # Enable automatic retry (default: True)
     max_retries=5,          # Maximum retry attempts (default: 3)
@@ -79,16 +78,20 @@ client = CompaniesHouseClient(
     max_delay=60.0,         # Maximum delay between retries (default: 60.0)
     jitter_range=1.0,       # Random jitter range (default: 1.0)
     on_retry=my_callback    # Optional callback for retry events
-)
+) as client:
+    # Use client here
+    pass
 
 # Custom retry callback
 async def my_retry_callback(attempt, delay, response):
     print(f"Retry attempt {attempt} after {delay}s delay")
 
-client = CompaniesHouseClient(
+async with AsyncClient(
     api_key="your-api-key",
     on_retry=my_retry_callback
-)
+) as client:
+    # Use client here
+    pass
 ```
 
 The SDK respects `X-Ratelimit-Reset` headers from the API for intelligent wait times and uses exponential backoff with jitter to prevent thundering herd problems.

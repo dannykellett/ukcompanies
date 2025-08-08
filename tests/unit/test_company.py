@@ -5,16 +5,16 @@ from datetime import date
 import pytest
 from pydantic import ValidationError
 
+from ukcompanies.models.address import Address
 from ukcompanies.models.company import (
-    Accounts,
     AccountingReference,
+    Accounts,
     Company,
     CompanyStatus,
     CompanyType,
     ConfirmationStatement,
     Jurisdiction,
 )
-from ukcompanies.models.address import Address
 
 
 class TestCompanyStatus:

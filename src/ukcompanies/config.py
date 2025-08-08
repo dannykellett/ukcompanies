@@ -3,6 +3,7 @@
 This module handles client configuration, API endpoints, and constants.
 """
 
+import contextlib
 import os
 from typing import Any
 
@@ -110,17 +111,13 @@ class Config(BaseModel):
 
         timeout = os.getenv("COMPANIES_HOUSE_TIMEOUT")
         if timeout:
-            try:
+            with contextlib.suppress(ValueError):
                 env_config["timeout"] = float(timeout)
-            except ValueError:
-                pass  # Use default if invalid
 
         max_retries = os.getenv("COMPANIES_HOUSE_MAX_RETRIES")
         if max_retries:
-            try:
+            with contextlib.suppress(ValueError):
                 env_config["max_retries"] = int(max_retries)
-            except ValueError:
-                pass  # Use default if invalid
 
         # Override with any provided kwargs
         env_config.update(kwargs)

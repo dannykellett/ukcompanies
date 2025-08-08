@@ -72,7 +72,7 @@ class AsyncClient(EndpointMixin):
             if api_key:
                 kwargs["api_key"] = api_key
             self.config = Config.from_env(**kwargs)
-        
+
         # Set up retry configuration
         self.retry_config = RetryConfig(
             auto_retry=auto_retry,
@@ -301,16 +301,16 @@ class AsyncClient(EndpointMixin):
 
         except httpx.NetworkError as e:
             logger.error("Network error", error=str(e), path=path)
-            raise NetworkError(f"Network error: {str(e)}")
+            raise NetworkError(f"Network error: {str(e)}") from e
         except httpx.TimeoutException as e:
             logger.error("Request timeout", error=str(e), path=path)
-            raise NetworkError(f"Request timeout: {str(e)}")
+            raise NetworkError(f"Request timeout: {str(e)}") from e
         except CompaniesHouseError:
             # Re-raise our custom exceptions
             raise
         except Exception as e:
             logger.error("Unexpected error", error=str(e), path=path)
-            raise CompaniesHouseError(f"Unexpected error: {str(e)}")
+            raise CompaniesHouseError(f"Unexpected error: {str(e)}") from e
 
     async def _request(
         self,

@@ -1,7 +1,8 @@
 """Models package for UK Companies API client."""
 
 from .address import Address
-from .appointment import Appointment, AppointmentList, CompanyStatus as AppointmentCompanyStatus
+from .appointment import Appointment, AppointmentList
+from .appointment import CompanyStatus as AppointmentCompanyStatus
 from .base import BaseModel
 from .company import (
     AccountingReference,

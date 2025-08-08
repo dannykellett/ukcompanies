@@ -1,6 +1,5 @@
 """Unit tests for exceptions module."""
 
-import pytest
 
 from ukcompanies.exceptions import (
     AuthenticationError,
@@ -15,14 +14,14 @@ from ukcompanies.exceptions import (
 
 class TestCompaniesHouseError:
     """Test base exception class."""
-    
+
     def test_base_exception_with_message(self):
         """Test creating base exception with message."""
         error = CompaniesHouseError("Test error")
         assert str(error) == "Test error"
         assert error.message == "Test error"
         assert error.status_code is None
-    
+
     def test_base_exception_with_status_code(self):
         """Test creating base exception with status code."""
         error = CompaniesHouseError("Test error", status_code=500)
@@ -32,13 +31,13 @@ class TestCompaniesHouseError:
 
 class TestAuthenticationError:
     """Test authentication error."""
-    
+
     def test_default_message(self):
         """Test default error message."""
         error = AuthenticationError()
         assert error.message == "Authentication failed"
         assert error.status_code == 401
-    
+
     def test_custom_message(self):
         """Test custom error message."""
         error = AuthenticationError("Invalid API key")
@@ -48,7 +47,7 @@ class TestAuthenticationError:
 
 class TestRateLimitError:
     """Test rate limit error."""
-    
+
     def test_default_values(self):
         """Test default error values."""
         error = RateLimitError()
@@ -58,7 +57,7 @@ class TestRateLimitError:
         assert error.rate_limit_remain is None
         assert error.rate_limit_limit is None
         assert error.rate_limit_reset is None
-    
+
     def test_with_retry_metadata(self):
         """Test with retry metadata."""
         from datetime import datetime, timezone
@@ -79,13 +78,13 @@ class TestRateLimitError:
 
 class TestNotFoundError:
     """Test not found error."""
-    
+
     def test_default_message(self):
         """Test default error message."""
         error = NotFoundError()
         assert error.message == "Resource not found"
         assert error.status_code == 404
-    
+
     def test_custom_message(self):
         """Test custom error message."""
         error = NotFoundError("Company not found")
@@ -95,13 +94,13 @@ class TestNotFoundError:
 
 class TestValidationError:
     """Test validation error."""
-    
+
     def test_default_message(self):
         """Test default error message."""
         error = ValidationError()
         assert error.message == "Validation failed"
         assert error.status_code == 400
-    
+
     def test_custom_message(self):
         """Test custom error message."""
         error = ValidationError("Invalid company number")
@@ -111,13 +110,13 @@ class TestValidationError:
 
 class TestServerError:
     """Test server error."""
-    
+
     def test_default_values(self):
         """Test default error values."""
         error = ServerError()
         assert error.message == "Server error"
         assert error.status_code == 500
-    
+
     def test_custom_status_code(self):
         """Test custom status code."""
         error = ServerError("Gateway timeout", status_code=504)
@@ -127,13 +126,13 @@ class TestServerError:
 
 class TestNetworkError:
     """Test network error."""
-    
+
     def test_default_message(self):
         """Test default error message."""
         error = NetworkError()
         assert error.message == "Network connection failed"
         assert error.status_code is None
-    
+
     def test_custom_message(self):
         """Test custom error message."""
         error = NetworkError("Connection timeout")

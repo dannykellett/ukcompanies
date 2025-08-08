@@ -60,7 +60,4 @@ class AuthHandler:
             return False
 
         # Check for common invalid patterns
-        if self.api_key.lower() in ["test", "demo", "example", "your-api-key"]:
-            return False
-
-        return True
+        return self.api_key.lower() not in ["test", "demo", "example", "your-api-key"]

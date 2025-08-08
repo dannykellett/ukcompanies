@@ -4,6 +4,7 @@ This module defines custom exceptions for handling various error scenarios
 when interacting with the Companies House API.
 """
 
+import contextlib
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING
 
@@ -61,40 +62,36 @@ class RateLimitError(CompaniesHouseError):
             wait_seconds = (rate_limit_reset - datetime.now(timezone.utc)).total_seconds()
             if wait_seconds > 0:
                 message = f"{message} (resets in {wait_seconds:.1f} seconds)"
-        
+
         super().__init__(message, status_code=429)
         self.retry_after = retry_after
         self.rate_limit_remain = rate_limit_remain
         self.rate_limit_limit = rate_limit_limit
         self.rate_limit_reset = rate_limit_reset
-    
+
     @classmethod
     def from_response(cls, response: "httpx.Response") -> "RateLimitError":
         """Create RateLimitError from HTTP response.
-        
+
         Args:
             response: HTTP response with 429 status
-        
+
         Returns:
             RateLimitError with rate limit information
         """
         headers = response.headers
-        
+
         # Extract rate limit information from headers
         rate_limit_remain = None
         if "X-Ratelimit-Remain" in headers:
-            try:
+            with contextlib.suppress(ValueError, TypeError):
                 rate_limit_remain = int(headers["X-Ratelimit-Remain"])
-            except (ValueError, TypeError):
-                pass
-        
+
         rate_limit_limit = None
         if "X-Ratelimit-Limit" in headers:
-            try:
+            with contextlib.suppress(ValueError, TypeError):
                 rate_limit_limit = int(headers["X-Ratelimit-Limit"])
-            except (ValueError, TypeError):
-                pass
-        
+
         rate_limit_reset = None
         retry_after = None
         if "X-Ratelimit-Reset" in headers:
@@ -108,7 +105,7 @@ class RateLimitError(CompaniesHouseError):
                     retry_after = wait_seconds
             except (ValueError, TypeError):
                 pass
-        
+
         return cls(
             message="Rate limit exceeded",
             retry_after=retry_after,

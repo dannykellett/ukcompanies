@@ -39,11 +39,14 @@ class TestDisqualification:
     def test_is_active_current(self, basic_disqualification_data):
         """Test is_active property for current disqualification."""
         # Set dates to ensure it's active
-        from datetime import date as dt, timedelta
+        from datetime import date as dt
+        from datetime import timedelta
         today = dt.today()
         basic_disqualification_data["disqualified_from"] = (today - timedelta(days=365)).isoformat()
-        basic_disqualification_data["disqualified_until"] = (today + timedelta(days=365)).isoformat()
-        
+        basic_disqualification_data["disqualified_until"] = (
+            today + timedelta(days=365)
+        ).isoformat()
+
         disq = Disqualification(**basic_disqualification_data)
         assert disq.is_active is True
 
@@ -172,9 +175,10 @@ class TestDisqualificationItem:
 
     def test_active_disqualifications(self, disqualification_item_data):
         """Test getting active disqualifications."""
-        from datetime import date as dt, timedelta
+        from datetime import date as dt
+        from datetime import timedelta
         today = dt.today()
-        
+
         # Add one active and one expired disqualification
         disqualification_item_data["disqualifications"] = [
             {
@@ -193,16 +197,17 @@ class TestDisqualificationItem:
 
     def test_has_active_disqualifications(self, disqualification_item_data):
         """Test checking for active disqualifications."""
-        from datetime import date as dt, timedelta
+        from datetime import date as dt
+        from datetime import timedelta
         today = dt.today()
-        
+
         disqualification_item_data["disqualifications"][0]["disqualified_from"] = (
             today - timedelta(days=365)
         ).isoformat()
         disqualification_item_data["disqualifications"][0]["disqualified_until"] = (
             today + timedelta(days=365)
         ).isoformat()
-        
+
         item = DisqualificationItem(**disqualification_item_data)
         assert item.has_active_disqualifications is True
 

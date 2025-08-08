@@ -1,13 +1,11 @@
 """Integration tests for search endpoints."""
 
-from datetime import date
 
 import httpx
 import pytest
 import respx
 
 from ukcompanies import AsyncClient
-from ukcompanies.exceptions import NotFoundError, RateLimitError, ValidationError
 from ukcompanies.models.search import CompanySearchResult, OfficerSearchResult
 
 

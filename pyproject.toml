@@ -8,7 +8,18 @@ license = {text = "MIT"}
 authors = [
     {name = "Development Team"},
 ]
-
+keywords = ["uk", "companies", "house", "api", "sdk", "business", "data"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Office/Business",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+]
 dependencies = [
     "httpx>=0.27.0",
     "pydantic>=2.9.0",
@@ -17,6 +28,11 @@ dependencies = [
     "structlog>=24.4.0",
     "python-dateutil>=2.9.0",
 ]
+
+[project.urls]
+homepage = "https://github.com/dkellett/ukcompanies"
+repository = "https://github.com/dkellett/ukcompanies"
+documentation = "https://github.com/dkellett/ukcompanies#readme"
 
 [project.optional-dependencies]
 dev = [
@@ -32,7 +48,7 @@ docs = [
 ]
 
 [project.scripts]
-ukcompanies = "ukcompanies.cli:main"
+ukcompanies = "ukcompanies.cli.main:main"
 
 [build-system]
 requires = ["hatchling"]
@@ -93,5 +109,6 @@ asyncio_mode = "auto"
 
 [dependency-groups]
 dev = [
+    "build>=1.3.0",
     "pytest-cov>=6.2.1",
 ]

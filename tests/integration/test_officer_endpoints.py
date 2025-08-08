@@ -1,6 +1,5 @@
 """Integration tests for officer-related endpoints."""
 
-from datetime import date
 
 import httpx
 import pytest
@@ -161,7 +160,9 @@ class TestOfficersEndpoint:
         )
 
         async with AsyncClient(api_key="test_key") as client:
-            await client.get_officers("12345678", register_type="directors", order_by="appointed_on")
+            await client.get_officers(
+                "12345678", register_type="directors", order_by="appointed_on"
+            )
 
         # Check the request was made with correct params
         assert respx.calls[0].request.url.params["register_type"] == "directors"
@@ -520,7 +521,7 @@ class TestPrivacyCompliance:
         assert hasattr(dob, "month")
         assert hasattr(dob, "year")
         assert not hasattr(dob, "day")
-        
+
         # Verify string representation doesn't include day
         assert "/" in str(dob)
         parts = str(dob).split("/")
