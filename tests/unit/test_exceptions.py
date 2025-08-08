@@ -55,21 +55,26 @@ class TestRateLimitError:
         assert error.message == "Rate limit exceeded"
         assert error.status_code == 429
         assert error.retry_after is None
-        assert error.remaining is None
-        assert error.limit is None
+        assert error.rate_limit_remain is None
+        assert error.rate_limit_limit is None
+        assert error.rate_limit_reset is None
     
     def test_with_retry_metadata(self):
         """Test with retry metadata."""
+        from datetime import datetime, timezone
+        reset_time = datetime.now(timezone.utc)
         error = RateLimitError(
             message="Custom message",
             retry_after=60,
-            remaining=0,
-            limit=600
+            rate_limit_remain=0,
+            rate_limit_limit=600,
+            rate_limit_reset=reset_time
         )
-        assert error.message == "Custom message"
+        assert error.message == "Custom message (retry after 60.0 seconds)"
         assert error.retry_after == 60
-        assert error.remaining == 0
-        assert error.limit == 600
+        assert error.rate_limit_remain == 0
+        assert error.rate_limit_limit == 600
+        assert error.rate_limit_reset == reset_time
 
 
 class TestNotFoundError:

@@ -2,9 +2,10 @@
 
 import asyncio
 import random
+from collections.abc import Callable
 from datetime import datetime, timezone
 from enum import Enum
-from typing import Any, Callable, Optional
+from typing import Any
 
 import httpx
 import structlog
@@ -14,14 +15,14 @@ logger = structlog.get_logger(__name__)
 
 class BackoffStrategy(Enum):
     """Backoff strategy for retry logic."""
-    
+
     EXPONENTIAL = "exponential"
     FIXED = "fixed"
 
 
 class RetryConfig:
     """Configuration for retry behavior."""
-    
+
     def __init__(
         self,
         auto_retry: bool = True,
@@ -30,10 +31,10 @@ class RetryConfig:
         base_delay: float = 1.0,
         max_delay: float = 60.0,
         jitter_range: float = 1.0,
-        on_retry: Optional[Callable] = None,
+        on_retry: Callable | None = None,
     ) -> None:
         """Initialize retry configuration.
-        
+
         Args:
             auto_retry: Whether to automatically retry on rate limit
             max_retries: Maximum number of retry attempts
@@ -50,9 +51,9 @@ class RetryConfig:
         self.max_delay = max_delay
         self.jitter_range = jitter_range
         self.on_retry = on_retry
-        
+
         self._validate()
-    
+
     def _validate(self) -> None:
         """Validate configuration parameters."""
         if self.max_retries < 0:
@@ -74,13 +75,13 @@ def exponential_backoff(
     jitter_range: float = 1.0,
 ) -> float:
     """Calculate exponential backoff with jitter.
-    
+
     Args:
         attempt: Retry attempt number (0-based)
         base_delay: Base delay in seconds
         max_delay: Maximum delay in seconds
         jitter_range: Maximum jitter to add in seconds
-    
+
     Returns:
         Delay in seconds before next retry
     """
@@ -96,13 +97,13 @@ def fixed_backoff(
     jitter_range: float = 1.0,
 ) -> float:
     """Calculate fixed backoff with optional jitter.
-    
+
     Args:
         attempt: Retry attempt number (0-based, unused for fixed)
         base_delay: Fixed delay in seconds
         max_delay: Maximum delay in seconds (unused for fixed)
         jitter_range: Maximum jitter to add in seconds
-    
+
     Returns:
         Delay in seconds before next retry
     """
@@ -112,21 +113,21 @@ def fixed_backoff(
 
 class RetryManager:
     """Manages retry logic for rate-limited requests."""
-    
+
     def __init__(self, config: RetryConfig) -> None:
         """Initialize retry manager.
-        
+
         Args:
             config: Retry configuration
         """
         self.config = config
-    
+
     def _get_backoff_delay(self, attempt: int) -> float:
         """Get backoff delay for given attempt.
-        
+
         Args:
             attempt: Retry attempt number (0-based)
-        
+
         Returns:
             Delay in seconds
         """
@@ -144,26 +145,26 @@ class RetryManager:
                 self.config.max_delay,
                 self.config.jitter_range,
             )
-    
-    def _extract_reset_time(self, response: httpx.Response) -> Optional[float]:
+
+    def _extract_reset_time(self, response: httpx.Response) -> float | None:
         """Extract rate limit reset time from response headers.
-        
+
         Args:
             response: HTTP response
-        
+
         Returns:
             Seconds to wait until reset, or None if not available
         """
         reset_header = response.headers.get("X-Ratelimit-Reset")
         if not reset_header:
             return None
-        
+
         try:
             reset_timestamp = int(reset_header)
             reset_time = datetime.fromtimestamp(reset_timestamp, tz=timezone.utc)
             current_time = datetime.now(timezone.utc)
             wait_seconds = (reset_time - current_time).total_seconds()
-            
+
             if wait_seconds > 0:
                 logger.debug(
                     "Rate limit reset time extracted",
@@ -179,7 +180,22 @@ class RetryManager:
                 error=str(e),
             )
             return None
-    
+
+    @staticmethod
+    def _create_mock_429_response() -> Any:
+        """Create a mock 429 response object for callbacks.
+
+        This maintains backward compatibility with callback signatures
+        that expect an HTTP response object.
+
+        Returns:
+            Mock response object with status_code and headers attributes
+        """
+        return type('Response', (), {
+            'status_code': 429,
+            'headers': {}
+        })()
+
     async def execute_with_retry(
         self,
         request_func: Callable,
@@ -187,50 +203,44 @@ class RetryManager:
         **kwargs: Any,
     ) -> httpx.Response:
         """Execute request with retry logic.
-        
+
         Args:
             request_func: Async function to execute
             *args: Positional arguments for request_func
             **kwargs: Keyword arguments for request_func
-        
+
         Returns:
             HTTP response
-        
+
         Raises:
             RateLimitError: When max retries exceeded
         """
         from .exceptions import NetworkError, RateLimitError
-        
+
         attempt = 0
-        last_response = None
-        
+
         while attempt <= self.config.max_retries:
             try:
                 response = await request_func(*args, **kwargs)
-                
+
                 # If we get a response without exception, return it
                 return response
-                
+
             except RateLimitError as e:
                 # Handle rate limit errors
                 if not self.config.auto_retry or attempt >= self.config.max_retries:
                     raise
-                
+
                 # Calculate wait time from exception
                 if e.retry_after is not None:
                     wait_time = min(e.retry_after, self.config.max_delay)
                 else:
                     wait_time = self._get_backoff_delay(attempt)
-                
+
                 # Call retry callback if provided
                 if self.config.on_retry:
                     try:
-                        # Create a mock response object for the callback
-                        # This maintains backward compatibility with the callback signature
-                        mock_response = type('Response', (), {
-                            'status_code': 429,
-                            'headers': {}
-                        })()
+                        mock_response = self._create_mock_429_response()
                         if asyncio.iscoroutinefunction(self.config.on_retry):
                             await self.config.on_retry(attempt + 1, wait_time, mock_response)
                         else:
@@ -241,18 +251,18 @@ class RetryManager:
                             error=str(exc),
                             attempt=attempt + 1,
                         )
-                
+
                 logger.info(
                     "Rate limited, retrying request",
                     attempt=attempt + 1,
                     max_retries=self.config.max_retries,
                     wait_seconds=wait_time,
                 )
-                
+
                 # Non-blocking async sleep
                 await asyncio.sleep(wait_time)
                 attempt += 1
-                
+
             except (httpx.HTTPError, NetworkError) as exc:
                 # Network errors during retry
                 if attempt >= self.config.max_retries:
@@ -265,6 +275,7 @@ class RetryManager:
                 wait_time = self._get_backoff_delay(attempt)
                 await asyncio.sleep(wait_time)
                 attempt += 1
-        
+
         # Max retries exceeded (shouldn't normally reach here)
         raise RateLimitError("Max retries exceeded")
+
