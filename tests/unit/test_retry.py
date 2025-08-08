@@ -213,11 +213,12 @@ class TestRetryManager:
     @pytest.mark.asyncio
     async def test_execute_with_retry_success_after_retry(self, manager):
         """Test successful request after retry."""
-        responses = [
-            MagicMock(status_code=429, headers={}),
+        # First call raises RateLimitError, second succeeds
+        from ukcompanies.exceptions import RateLimitError
+        request_func = AsyncMock(side_effect=[
+            RateLimitError("Rate limited"),
             MagicMock(status_code=200),
-        ]
-        request_func = AsyncMock(side_effect=responses)
+        ])
         manager.config.jitter_range = 0  # No jitter for faster test
         manager.config.base_delay = 0.01  # Short delay for faster test
         
@@ -229,8 +230,9 @@ class TestRetryManager:
     @pytest.mark.asyncio
     async def test_execute_with_retry_max_retries_exceeded(self, manager):
         """Test max retries exceeded raises RateLimitError."""
-        response_429 = MagicMock(status_code=429, headers={})
-        request_func = AsyncMock(return_value=response_429)
+        from ukcompanies.exceptions import RateLimitError
+        # Always raises RateLimitError
+        request_func = AsyncMock(side_effect=RateLimitError("Rate limited"))
         manager.config.max_retries = 2
         manager.config.jitter_range = 0
         manager.config.base_delay = 0.01
@@ -243,9 +245,9 @@ class TestRetryManager:
     @pytest.mark.asyncio
     async def test_execute_with_retry_auto_retry_disabled(self, manager):
         """Test auto_retry disabled raises immediately."""
+        from ukcompanies.exceptions import RateLimitError
         manager.config.auto_retry = False
-        response_429 = MagicMock(status_code=429, headers={})
-        request_func = AsyncMock(return_value=response_429)
+        request_func = AsyncMock(side_effect=RateLimitError("Rate limited"))
         
         with pytest.raises(RateLimitError):
             await manager.execute_with_retry(request_func)
@@ -255,13 +257,15 @@ class TestRetryManager:
     @pytest.mark.asyncio
     async def test_execute_with_retry_uses_reset_header(self, manager):
         """Test retry uses X-Ratelimit-Reset header when available."""
+        from ukcompanies.exceptions import RateLimitError
         # Use a future timestamp 2 seconds from now
         future_timestamp = int(datetime.now(timezone.utc).timestamp()) + 2
-        responses = [
-            MagicMock(status_code=429, headers={"X-Ratelimit-Reset": str(future_timestamp)}),
+        reset_time = datetime.fromtimestamp(future_timestamp, tz=timezone.utc)
+        # First call raises RateLimitError with reset time, second succeeds
+        request_func = AsyncMock(side_effect=[
+            RateLimitError("Rate limited", retry_after=2.0, rate_limit_reset=reset_time),
             MagicMock(status_code=200),
-        ]
-        request_func = AsyncMock(side_effect=responses)
+        ])
         manager.config.max_delay = 1.0  # Cap at 1 second for test
         
         start_time = asyncio.get_event_loop().time()
@@ -275,16 +279,17 @@ class TestRetryManager:
     @pytest.mark.asyncio
     async def test_execute_with_retry_callback_invoked(self, manager):
         """Test on_retry callback is invoked."""
+        from ukcompanies.exceptions import RateLimitError
         callback = AsyncMock()
         manager.config.on_retry = callback
         manager.config.jitter_range = 0
         manager.config.base_delay = 0.01
         
-        responses = [
-            MagicMock(status_code=429, headers={}),
+        # First call raises RateLimitError, second succeeds
+        request_func = AsyncMock(side_effect=[
+            RateLimitError("Rate limited"),
             MagicMock(status_code=200),
-        ]
-        request_func = AsyncMock(side_effect=responses)
+        ])
         
         await manager.execute_with_retry(request_func)
         
@@ -292,21 +297,23 @@ class TestRetryManager:
         args = callback.call_args[0]
         assert args[0] == 1  # Attempt number
         assert isinstance(args[1], float)  # Wait time
-        assert args[2].status_code == 429  # Response
+        assert hasattr(args[2], 'status_code')  # Mock response object
+        assert args[2].status_code == 429  # Response status
     
     @pytest.mark.asyncio
     async def test_execute_with_retry_sync_callback(self, manager):
         """Test synchronous on_retry callback."""
+        from ukcompanies.exceptions import RateLimitError
         callback = MagicMock()
         manager.config.on_retry = callback
         manager.config.jitter_range = 0
         manager.config.base_delay = 0.01
         
-        responses = [
-            MagicMock(status_code=429, headers={}),
+        # First call raises RateLimitError, second succeeds
+        request_func = AsyncMock(side_effect=[
+            RateLimitError("Rate limited"),
             MagicMock(status_code=200),
-        ]
-        request_func = AsyncMock(side_effect=responses)
+        ])
         
         await manager.execute_with_retry(request_func)
         
@@ -315,16 +322,17 @@ class TestRetryManager:
     @pytest.mark.asyncio
     async def test_execute_with_retry_callback_exception_handled(self, manager):
         """Test callback exceptions are handled gracefully."""
+        from ukcompanies.exceptions import RateLimitError
         callback = AsyncMock(side_effect=Exception("Callback error"))
         manager.config.on_retry = callback
         manager.config.jitter_range = 0
         manager.config.base_delay = 0.01
         
-        responses = [
-            MagicMock(status_code=429, headers={}),
+        # First call raises RateLimitError, second succeeds
+        request_func = AsyncMock(side_effect=[
+            RateLimitError("Rate limited"),
             MagicMock(status_code=200),
-        ]
-        request_func = AsyncMock(side_effect=responses)
+        ])
         
         # Should not raise the callback exception
         response = await manager.execute_with_retry(request_func)

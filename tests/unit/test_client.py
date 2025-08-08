@@ -189,11 +189,19 @@ class TestAsyncClient:
     
     async def test_handle_error_response_429(self):
         """Test handling 429 rate limit error."""
+        from datetime import datetime, timezone
         client = AsyncClient(api_key="test-key")
+        
+        # Create a future timestamp for rate limit reset
+        future_timestamp = int(datetime.now(timezone.utc).timestamp()) + 60
         
         response = MagicMock()
         response.status_code = 429
-        response.headers = {"Retry-After": "60"}
+        response.headers = {
+            "X-Ratelimit-Remain": "0",
+            "X-Ratelimit-Limit": "600",
+            "X-Ratelimit-Reset": str(future_timestamp)
+        }
         response.json.return_value = {"error": "Rate limit exceeded"}
         
         with pytest.raises(RateLimitError) as exc_info:
@@ -201,7 +209,11 @@ class TestAsyncClient:
         
         error = exc_info.value
         assert "Rate limit exceeded" in str(error)
-        assert error.retry_after == 60
+        assert error.rate_limit_remain == 0
+        assert error.rate_limit_limit == 600
+        assert error.rate_limit_reset is not None
+        assert error.retry_after is not None  # Should be calculated from reset time
+        assert 59 <= error.retry_after <= 61  # Allow for small timing differences
     
     async def test_handle_error_response_400(self):
         """Test handling 400 validation error."""
