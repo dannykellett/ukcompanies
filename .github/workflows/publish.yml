@@ -1,0 +1,124 @@
+name: Publish to PyPI
+
+on:
+  push:
+    tags:
+      - 'v*'  # Trigger on version tags like v0.1.0, v1.0.0
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.10", "3.11", "3.12"]
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Install uv
+      uses: astral-sh/setup-uv@v4
+      with:
+        version: ">=0.5.0"
+    
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ matrix.python-version }}
+    
+    - name: Install dependencies
+      run: uv sync --dev
+    
+    - name: Run linting
+      run: uv run ruff check src/ tests/
+    
+    - name: Run type checking
+      run: uv run mypy src/ukcompanies
+    
+    - name: Run tests
+      run: uv run pytest tests/ --cov=ukcompanies --cov-report=term-missing
+
+  build:
+    needs: test
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Install uv
+      uses: astral-sh/setup-uv@v4
+      with:
+        version: ">=0.5.0"
+    
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: "3.12"
+    
+    - name: Build package
+      run: uv build
+    
+    - name: Upload build artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: dist
+        path: dist/
+
+  publish-testpypi:
+    needs: build
+    runs-on: ubuntu-latest
+    environment: testpypi
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Download build artifacts
+      uses: actions/download-artifact@v4
+      with:
+        name: dist
+        path: dist/
+    
+    - name: Install uv
+      uses: astral-sh/setup-uv@v4
+      with:
+        version: ">=0.5.0"
+    
+    - name: Publish to TestPyPI
+      run: uv publish --index-url https://test.pypi.org/legacy/ --token ${{ secrets.TEST_PYPI_API_TOKEN }} dist/*
+    
+    - name: Test installation from TestPyPI
+      run: |
+        python -m venv test_env
+        source test_env/bin/activate
+        pip install --index-url https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple/ ukcompanies==${{ github.ref_name }}
+        python -c "import ukcompanies; print(f'Version: {ukcompanies.__version__}')"
+        python -m ukcompanies --help
+
+  publish-pypi:
+    needs: publish-testpypi
+    runs-on: ubuntu-latest
+    environment: pypi
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Download build artifacts
+      uses: actions/download-artifact@v4
+      with:
+        name: dist
+        path: dist/
+    
+    - name: Install uv
+      uses: astral-sh/setup-uv@v4
+      with:
+        version: ">=0.5.0"
+    
+    - name: Publish to PyPI
+      run: uv publish --token ${{ secrets.PYPI_API_TOKEN }} dist/*
+    
+    - name: Test installation from PyPI
+      run: |
+        python -m venv test_env
+        source test_env/bin/activate
+        pip install ukcompanies==${{ github.ref_name }}
+        python -c "import ukcompanies; print(f'Version: {ukcompanies.__version__}')"
+        python -m ukcompanies --help

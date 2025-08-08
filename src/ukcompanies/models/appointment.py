@@ -32,43 +32,43 @@ class Appointment(BaseModel):
 
     # Company information
     appointed_to: dict = Field(..., description="Company details for this appointment")
-    
+
     # The appointed_to dict typically contains:
     # - company_name: str
-    # - company_number: str  
+    # - company_number: str
     # - company_status: str
-    
+
     # Appointment details
     name: str = Field(..., description="Officer name for this appointment")
     officer_role: OfficerRole = Field(..., description="Role in this company")
     appointed_on: date | None = Field(None, description="Date appointed to this role")
     appointed_before: date | None = Field(
-        None, 
+        None,
         description="Date appointed before this date (when exact date unknown)"
     )
     resigned_on: date | None = Field(None, description="Date resigned from this role")
-    
+
     # Personal/corporate details
     nationality: str | None = Field(None, description="Nationality at time of appointment")
     country_of_residence: str | None = Field(None, description="Country of residence")
     occupation: str | None = Field(None, description="Occupation at time of appointment")
-    
+
     # Address
     address: Address | None = Field(None, description="Service address for this appointment")
-    
+
     # Identification
     identification: dict | None = Field(
         None,
         description="Corporate identification if corporate officer"
     )
-    
+
     # Additional info
     is_pre_1992_appointment: bool | None = Field(
         None,
         description="Whether this appointment predates 1992"
     )
     person_number: str | None = Field(None, description="Internal person number")
-    
+
     # Links
     links: dict | None = Field(None, description="API links for related resources")
 
@@ -115,15 +115,15 @@ class AppointmentList(BaseModel):
     """List of appointments with pagination."""
 
     items: list[Appointment] = Field(
-        default_factory=list, 
+        default_factory=list,
         description="List of appointments"
     )
-    
+
     # Pagination metadata
     items_per_page: int | None = Field(None, description="Number of items per page")
     start_index: int | None = Field(None, description="Starting index for pagination")
     total_results: int | None = Field(None, description="Total number of results")
-    
+
     # Additional metadata
     date_of_birth: dict | None = Field(
         None,
@@ -135,7 +135,7 @@ class AppointmentList(BaseModel):
     )
     kind: str | None = Field(None, description="Type of resource")
     name: str | None = Field(None, description="Officer's name")
-    
+
     # Links for pagination
     links: dict | None = Field(None, description="Links for pagination")
 
@@ -146,7 +146,7 @@ class AppointmentList(BaseModel):
             return False
         if self.items_per_page is None:
             return False
-        
+
         current_end = self.start_index + len(self.items)
         return current_end < self.total_results
 

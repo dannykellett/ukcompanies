@@ -2,8 +2,6 @@
 
 from datetime import date
 
-import pytest
-
 from ukcompanies.models.address import Address
 from ukcompanies.models.search import (
     AllSearchResult,
@@ -36,7 +34,7 @@ class TestCompanySearchItem:
             locality="London",
             postal_code="SW1A 1AA",
         )
-        
+
         item = CompanySearchItem(
             company_number="12345678",
             company_type="ltd",
@@ -50,7 +48,7 @@ class TestCompanySearchItem:
             matches={"title": [0, 4]},
             links={"self": "/company/12345678"},
         )
-        
+
         assert item.company_number == "12345678"
         assert item.company_type == "ltd"
         assert item.title == "Test Company Ltd"
@@ -82,7 +80,7 @@ class TestOfficerSearchItem:
             locality="London",
             postal_code="SW1A 1AA",
         )
-        
+
         item = OfficerSearchItem(
             title="John Smith",
             description="Director",
@@ -95,7 +93,7 @@ class TestOfficerSearchItem:
             snippet="John Smith, Director",
             links={"self": "/officers/ABC123/appointments"},
         )
-        
+
         assert item.title == "John Smith"
         assert item.description == "Director"
         assert item.description_identifiers == ["appointment-count", "born-on"]
@@ -119,7 +117,7 @@ class TestDisqualifiedOfficerSearchItem:
             date_of_birth={"month": 6, "year": 1975},
             address_snippet="456 Another Street, Manchester",
         )
-        
+
         assert item.title == "Jane Doe"
         assert item.description == "Disqualified Director"
         assert item.date_of_birth == {"month": 6, "year": 1975}
@@ -140,7 +138,7 @@ class TestSearchResult:
             start_index=0,
             total_results=0,
         )
-        
+
         assert result.items == []
         assert result.items_per_page == 20
         assert result.kind == "search#test"
@@ -158,7 +156,7 @@ class TestSearchResult:
             total_results=10,
         )
         assert result.has_more_pages is False
-        
+
         # Has more pages
         result = SearchResult(
             kind="test",
@@ -167,7 +165,7 @@ class TestSearchResult:
             total_results=50,
         )
         assert result.has_more_pages is True
-        
+
         # Exactly at boundary
         result = SearchResult(
             kind="test",
@@ -186,7 +184,7 @@ class TestSearchResult:
             total_results=50,
         )
         assert result.next_start_index == 20
-        
+
         result = SearchResult(
             kind="test",
             items_per_page=10,
@@ -205,7 +203,7 @@ class TestSearchResult:
             total_results=100,
         )
         assert result.total_pages == 5
-        
+
         # Partial last page
         result = SearchResult(
             kind="test",
@@ -214,7 +212,7 @@ class TestSearchResult:
             total_results=95,
         )
         assert result.total_pages == 5
-        
+
         # Single page
         result = SearchResult(
             kind="test",
@@ -223,7 +221,7 @@ class TestSearchResult:
             total_results=10,
         )
         assert result.total_pages == 1
-        
+
         # No results
         result = SearchResult(
             kind="test",
@@ -232,7 +230,7 @@ class TestSearchResult:
             total_results=0,
         )
         assert result.total_pages == 0
-        
+
         # Edge case: items_per_page is 0
         result = SearchResult(
             kind="test",
@@ -256,14 +254,14 @@ class TestCompanySearchResult:
             company_number="87654321",
             title="Company Two",
         )
-        
+
         result = CompanySearchResult(
             items=[item1, item2],
             items_per_page=20,
             start_index=0,
             total_results=2,
         )
-        
+
         assert len(result.items) == 2
         assert result.items[0].company_number == "12345678"
         assert result.items[1].company_number == "87654321"
@@ -277,14 +275,14 @@ class TestOfficerSearchResult:
         """Test creating officer search result."""
         item1 = OfficerSearchItem(title="John Smith")
         item2 = OfficerSearchItem(title="Jane Doe")
-        
+
         result = OfficerSearchResult(
             items=[item1, item2],
             items_per_page=20,
             start_index=0,
             total_results=2,
         )
-        
+
         assert len(result.items) == 2
         assert result.items[0].title == "John Smith"
         assert result.items[1].title == "Jane Doe"
@@ -306,14 +304,14 @@ class TestAllSearchResult:
         disqualified_item = DisqualifiedOfficerSearchItem(
             title="Jane Doe",
         )
-        
+
         result = AllSearchResult(
             items=[company_item, officer_item, disqualified_item],
             items_per_page=20,
             start_index=0,
             total_results=3,
         )
-        
+
         assert len(result.items) == 3
         assert result.kind == "search#all"
 
@@ -322,14 +320,14 @@ class TestAllSearchResult:
         company1 = CompanySearchItem(company_number="12345678", title="Company One")
         company2 = CompanySearchItem(company_number="87654321", title="Company Two")
         officer = OfficerSearchItem(title="John Smith")
-        
+
         result = AllSearchResult(
             items=[company1, officer, company2],
             items_per_page=20,
             start_index=0,
             total_results=3,
         )
-        
+
         companies = result.get_companies()
         assert len(companies) == 2
         assert companies[0].company_number == "12345678"
@@ -340,14 +338,14 @@ class TestAllSearchResult:
         company = CompanySearchItem(company_number="12345678", title="Company")
         officer1 = OfficerSearchItem(title="John Smith")
         officer2 = OfficerSearchItem(title="Jane Doe")
-        
+
         result = AllSearchResult(
             items=[company, officer1, officer2],
             items_per_page=20,
             start_index=0,
             total_results=3,
         )
-        
+
         officers = result.get_officers()
         assert len(officers) == 2
         assert officers[0].title == "John Smith"
@@ -359,14 +357,14 @@ class TestAllSearchResult:
         officer = OfficerSearchItem(title="John Smith")
         disqualified1 = DisqualifiedOfficerSearchItem(title="Bad Actor 1")
         disqualified2 = DisqualifiedOfficerSearchItem(title="Bad Actor 2")
-        
+
         result = AllSearchResult(
             items=[company, disqualified1, officer, disqualified2],
             items_per_page=20,
             start_index=0,
             total_results=4,
         )
-        
+
         disqualified = result.get_disqualified_officers()
         assert len(disqualified) == 2
         assert disqualified[0].title == "Bad Actor 1"

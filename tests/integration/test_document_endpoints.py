@@ -1,7 +1,5 @@
 """Integration tests for document endpoints."""
 
-import json
-from datetime import datetime
 
 import pytest
 import respx
@@ -80,12 +78,12 @@ class TestDocumentMetadata:
                 assert result.pages == 25
                 assert result.filename == "accounts.pdf"
                 assert result.etag == "abc123def456"
-                
+
                 # Check available formats
                 assert len(result.available_formats) == 2
                 assert DocumentFormat.PDF in result.available_formats
                 assert DocumentFormat.XHTML in result.available_formats
-                
+
                 # Check resources
                 assert "application/pdf" in result.resources
                 assert result.resources["application/pdf"].content_length == 1234567
@@ -139,7 +137,7 @@ class TestDocumentMetadata:
         async with AsyncClient(api_key="test_key") as client:
             with pytest.raises(ValidationError) as exc_info:
                 await client.document("")
-            
+
             assert "Document ID cannot be empty" in str(exc_info.value)
 
     async def test_document_metadata_not_found(self):
@@ -197,7 +195,7 @@ class TestDocumentContent:
                 # Verify the request was made with correct Accept header
                 assert route.called
                 assert route.call_count == 1
-                
+
                 # Check the result
                 assert result.document_id == "doc123"
                 assert result.content_type == DocumentFormat.PDF
@@ -235,7 +233,7 @@ class TestDocumentContent:
                 # Verify the request was made
                 assert route.called
                 assert route.call_count == 1
-                
+
                 # Check the result
                 assert result.document_id == "doc123"
                 assert result.content_type == DocumentFormat.XHTML
@@ -273,7 +271,7 @@ class TestDocumentContent:
                 # Verify the request was made
                 assert route.called
                 assert route.call_count == 1
-                
+
                 # Check the result
                 assert result.document_id == "doc123"
                 assert result.content_type == DocumentFormat.JSON
@@ -309,7 +307,7 @@ class TestDocumentContent:
 
                 # Verify the request was made
                 assert route.called
-                
+
                 # Check the result
                 assert result.document_id == "doc123"
                 assert result.content_type == DocumentFormat.CSV
@@ -344,7 +342,7 @@ class TestDocumentContent:
 
                 # Verify the request was made
                 assert route.called
-                
+
                 # Check the result - should detect PDF from content-type
                 assert result.document_id == "doc123"
                 assert result.content_type == DocumentFormat.PDF
@@ -355,7 +353,7 @@ class TestDocumentContent:
         async with AsyncClient(api_key="test_key") as client:
             with pytest.raises(ValidationError) as exc_info:
                 await client.document_content("")
-            
+
             assert "Document ID cannot be empty" in str(exc_info.value)
 
     async def test_document_content_not_found(self):
@@ -429,7 +427,7 @@ class TestDocumentContent:
 
                 # Verify the request was made
                 assert route.called
-                
+
                 # Check the result
                 assert result.document_id == "doc123"
                 assert result.content_type == DocumentFormat.PDF

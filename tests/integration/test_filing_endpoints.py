@@ -1,6 +1,5 @@
 """Integration tests for filing history endpoints."""
 
-import json
 from datetime import date
 
 import pytest
@@ -80,7 +79,7 @@ class TestFilingHistory:
                 assert result.start_index == 0
                 assert result.filing_history_status == "filing-history-available"
                 assert len(result.items) == 2
-                
+
                 # Check first item
                 first_item = result.items[0]
                 assert first_item.transaction_id == "MzM2NTY5MzQ1OGFkaXF6a2N4"
@@ -192,7 +191,7 @@ class TestFilingHistory:
         async with AsyncClient(api_key="test_key") as client:
             with pytest.raises(ValidationError) as exc_info:
                 await client.filing_history("INVALID")
-            
+
             assert "Invalid company number format" in str(exc_info.value)
 
     async def test_filing_history_not_found(self):
@@ -292,7 +291,7 @@ class TestFilingTransaction:
         async with AsyncClient(api_key="test_key") as client:
             with pytest.raises(ValidationError) as exc_info:
                 await client.filing_transaction("12345678", "")
-            
+
             assert "Transaction ID cannot be empty" in str(exc_info.value)
 
     async def test_filing_transaction_not_found(self):
@@ -437,7 +436,7 @@ class TestFilingHistoryPagination:
                 all_ids = []
                 for page in pages:
                     all_ids.extend([item.transaction_id for item in page.items])
-                
+
                 expected_ids = [f"transaction_{i}" for i in range(25)]
                 assert all_ids == expected_ids
 
