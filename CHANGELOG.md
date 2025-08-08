@@ -7,11 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.6.0] - 2025-08-08
+
 ### Added
 - Retry logic with exponential and fixed backoff strategies (Story 1.6)
-- Configurable retry parameters (auto_retry, max_retries, backoff)
+- Configurable retry parameters (auto_retry, max_retries, backoff, base_delay, max_delay, jitter_range)
 - Optional on_retry callback for monitoring retry attempts
-- Enhanced RateLimitError with retry metadata
+- Enhanced RateLimitError with complete rate limit metadata
+- X-Ratelimit-Reset header parsing for intelligent wait times
+- Network error handling with automatic retry
+- Non-blocking async retry behavior maintained throughout retry process
+
+### Changed
+- RateLimitError now includes rate_limit_remain, rate_limit_limit, and rate_limit_reset attributes
+- AsyncClient automatically retries 429 responses when auto_retry is enabled
 
 ## [0.5.0] - 2025-01-08
 
