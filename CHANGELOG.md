@@ -66,13 +66,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Configuration module with constants
 - Comprehensive unit test structure with respx mocking
 
-## [0.1.0] - 2025-01-04
+## [0.1.0] - 2025-08-08
 
 ### Added
 - Initial project setup with uv package manager (Story 1.1)
-- Basic project structure following modern Python best practices
-- Configuration for development tools (ruff, mypy, pytest)
-- Documentation structure with MkDocs
-- MIT license
-- Comprehensive .gitignore for Python projects
-- Environment variable configuration example (.env.example)
+- Core AsyncClient with httpx integration (Story 1.2)
+- Search endpoints for companies and officers (Story 1.3)
+- Officer and appointments endpoints (Story 1.4)
+- Filing history and document endpoints (Story 1.5)
+- Comprehensive retry logic and rate limiting (Story 1.6)
+- PyPI package publication (Story 2.1)
+- Production-ready Python SDK with full Companies House API coverage
+- Async-first architecture with context manager support
+- Type-safe Pydantic models for all API responses
+- Intelligent retry logic with exponential backoff
+- Rate limit awareness with X-Ratelimit-Reset header parsing
+- Comprehensive test suite (323 tests) with mock and live API validation
+- Complete documentation with MkDocs
+- CLI interface for command-line usage

@@ -33,17 +33,19 @@ COMPANIES_HOUSE_API_KEY=your-api-key-here
 ### Initialize the Client
 
 ```python
-from ukcompanies import CompaniesHouseClient
+from ukcompanies import AsyncClient
 import asyncio
 
 async def main():
     # Initialize with API key
-    client = CompaniesHouseClient(api_key="your-api-key")
+    async with AsyncClient(api_key="your-api-key") as client:
+        # Your code here
+        pass
     
     # Or load from environment
-    client = CompaniesHouseClient()  # Will read from COMPANIES_HOUSE_API_KEY env var
-    
-    # Your code here
+    async with AsyncClient() as client:  # Reads COMPANIES_HOUSE_API_KEY env var
+        # Your code here
+        pass
     
 asyncio.run(main())
 ```
@@ -54,15 +56,15 @@ asyncio.run(main())
 # Search by company name
 results = await client.search_companies("Tesla")
 
-for company in results:
-    print(f"{company.company_name} - {company.company_number}")
+for company in results.items:
+    print(f"{company.title} - {company.company_number}")
 ```
 
 ### Get Company Details
 
 ```python
 # Get detailed information about a specific company
-company = await client.get_company("12345678")
+company = await client.profile("00445790")  # Tesco PLC
 
 print(f"Name: {company.company_name}")
 print(f"Status: {company.company_status}")

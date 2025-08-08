@@ -23,16 +23,20 @@ pip install ukcompanies
 ## Quick Example
 
 ```python
-from ukcompanies import CompaniesHouseClient
+import asyncio
+from ukcompanies import AsyncClient
 
-# Initialize the client
-client = CompaniesHouseClient(api_key="your-api-key")
+async def main():
+    # Initialize the client
+    async with AsyncClient(api_key="your-api-key") as client:
+        # Search for companies
+        results = await client.search_companies("OpenAI")
+        
+        # Get company details
+        company = await client.profile("12345678")
+        print(f"{company.company_name} - {company.company_status}")
 
-# Search for companies
-results = await client.search_companies("OpenAI")
-
-# Get company details
-company = await client.get_company("12345678")
+asyncio.run(main())
 ```
 
 ## Next Steps

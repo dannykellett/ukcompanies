@@ -15,7 +15,7 @@ class BaseModel(PydanticBaseModel):
         validate_assignment=True,
         str_strip_whitespace=True,
         arbitrary_types_allowed=False,
-        extra="forbid",  # Strict validation - no extra fields allowed
+        extra="ignore",  # Allow extra fields from API
     )
 
     def to_dict(self, exclude_none: bool = True) -> dict[str, Any]:

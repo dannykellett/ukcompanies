@@ -6,20 +6,19 @@
 
 ```python
 import asyncio
-from ukcompanies import CompaniesHouseClient
+from ukcompanies import AsyncClient
 
 async def search_companies_example():
-    client = CompaniesHouseClient()
-    
-    # Search for technology companies
-    results = await client.search_companies("technology")
-    
-    print(f"Found {len(results)} companies:")
-    for company in results[:5]:  # Display first 5
-        print(f"- {company.company_name} ({company.company_number})")
-        print(f"  Status: {company.company_status}")
-        print(f"  Incorporated: {company.date_of_creation}")
-        print()
+    async with AsyncClient() as client:
+        # Search for technology companies
+        results = await client.search_companies("technology")
+        
+        print(f"Found {results.total_results} companies (showing {len(results.items)}):")
+        for company in results.items[:5]:  # Display first 5
+            print(f"- {company.title} ({company.company_number})")
+            print(f"  Status: {company.company_status}")
+            print(f"  Address: {company.address_snippet}")
+            print()
 
 asyncio.run(search_companies_example())
 ```
