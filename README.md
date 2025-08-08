@@ -11,11 +11,16 @@ A modern Python SDK for accessing the UK Companies House API.
 - **Well-tested**: Extensive test coverage with unit and integration tests
 - **Automatic Retry**: Smart retry logic with exponential backoff for rate-limited requests
 - **Rate Limit Aware**: Intelligent handling of API rate limits with configurable retry strategies
+- **Production Ready**: Published on PyPI, thoroughly tested with live API
 
 ## Installation
 
 ```bash
+# Install from PyPI
 pip install ukcompanies
+
+# Or with uv
+uv add ukcompanies
 ```
 
 ## Quick Start

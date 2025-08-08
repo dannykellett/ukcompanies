@@ -1,15 +1,16 @@
 # API Reference
 
-## CompaniesHouseClient
+## AsyncClient
 
-The main client class for interacting with the Companies House API.
+The main async client class for interacting with the Companies House API.
 
 ### Initialization
 
 ```python
-from ukcompanies import CompaniesHouseClient
+from ukcompanies import AsyncClient
 
-client = CompaniesHouseClient(
+# Use as context manager (recommended)
+async with AsyncClient(
     api_key="your-api-key",  # Optional if set in environment
     base_url="https://api.company-information.service.gov.uk",  # Optional, uses default
     timeout=30.0,  # Optional, request timeout in seconds
@@ -43,10 +44,12 @@ The client supports automatic retry for rate-limited requests (HTTP 429) and net
 async def my_retry_callback(attempt: int, delay: float, response):
     print(f"Retrying request - attempt {attempt}, waiting {delay}s")
 
-client = CompaniesHouseClient(
+async with AsyncClient(
     api_key="your-api-key",
     on_retry=my_retry_callback
-)
+) as client:
+    # Use client here
+    pass
 ```
 
 The SDK automatically respects `X-Ratelimit-Reset` headers from the API and uses intelligent wait times.
