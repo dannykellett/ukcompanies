@@ -44,11 +44,11 @@ class TestBaseModel:
         assert isinstance(result, str)
         assert "{" in result  # Valid JSON
 
-    def test_extra_fields_forbidden(self):
-        """Test that extra fields are not allowed."""
-        with pytest.raises(ValidationError) as exc_info:
-            BaseModel(extra_field="not_allowed")
-        assert "extra" in str(exc_info.value).lower()
+    def test_extra_fields_ignored(self):
+        """Test that extra fields are ignored."""
+        # Extra fields should be ignored, not raise an error
+        model = BaseModel(extra_field="not_allowed")
+        assert not hasattr(model, 'extra_field')
 
 
 class TestAddress:
@@ -114,11 +114,12 @@ class TestAddress:
         )
         assert address.full_address == "123 Main St, London, SW1A 1AA"
 
-    def test_missing_required_field(self):
-        """Test that address_line_1 is required."""
-        with pytest.raises(ValidationError) as exc_info:
-            Address()
-        assert "address_line_1" in str(exc_info.value)
+    def test_all_fields_optional(self):
+        """Test that all address fields are now optional."""
+        # This should not raise an error anymore
+        address = Address()
+        assert address.address_line_1 is None
+        assert address.full_address == ""
 
     def test_whitespace_stripping(self):
         """Test that whitespace is stripped from fields."""
