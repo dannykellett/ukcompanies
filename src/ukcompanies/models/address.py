@@ -9,7 +9,7 @@ class Address(BaseModel):
     """Represents a UK address."""
 
     premises: str | None = Field(None, description="Building name or number")
-    address_line_1: str = Field(..., description="First line of address")
+    address_line_1: str | None = Field(None, description="First line of address")
     address_line_2: str | None = Field(None, description="Second line of address")
     locality: str | None = Field(None, description="Town or city")
     region: str | None = Field(None, description="County or state")
@@ -28,7 +28,8 @@ class Address(BaseModel):
         if self.premises:
             parts.append(self.premises)
 
-        parts.append(self.address_line_1)
+        if self.address_line_1:
+            parts.append(self.address_line_1)
 
         if self.address_line_2:
             parts.append(self.address_line_2)
