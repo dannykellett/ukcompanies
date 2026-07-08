@@ -83,7 +83,7 @@ jobs:
         version: ">=0.5.0"
     
     - name: Publish to TestPyPI
-      run: uv publish --index-url https://test.pypi.org/legacy/ --token ${{ secrets.TEST_PYPI_API_TOKEN }} dist/*
+      run: uv publish --publish-url https://test.pypi.org/legacy/ --token ${{ secrets.TEST_PYPI_API_TOKEN }} dist/*
     
     - name: Test installation from TestPyPI
       run: |
