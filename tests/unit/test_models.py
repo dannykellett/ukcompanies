@@ -44,11 +44,16 @@ class TestBaseModel:
         assert isinstance(result, str)
         assert "{" in result  # Valid JSON
 
-    def test_extra_fields_forbidden(self):
-        """Test that extra fields are not allowed."""
-        with pytest.raises(ValidationError) as exc_info:
-            BaseModel(extra_field="not_allowed")
-        assert "extra" in str(exc_info.value).lower()
+    def test_extra_fields_ignored(self):
+        """Test that unknown extra fields from the API are silently ignored.
+
+        The base model sets ``extra="ignore"`` so the client tolerates fields
+        the API may add over time: construction succeeds and the unknown field
+        is dropped rather than raising a ValidationError.
+        """
+        model = BaseModel(extra_field="not_allowed")
+        assert not hasattr(model, "extra_field")
+        assert "extra_field" not in model.to_dict(exclude_none=False)
 
 
 class TestAddress:

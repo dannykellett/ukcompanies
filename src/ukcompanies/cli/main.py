@@ -1,6 +1,7 @@
 """CLI entry point for ukcompanies package."""
 
 import asyncio
+import logging
 import sys
 
 import click
@@ -24,8 +25,8 @@ def cli(ctx: click.Context, api_key: str | None, base_url: str, verbose: bool) -
     """UK Companies House API CLI."""
     if verbose:
         structlog.configure(
-            wrapper_class=structlog.dev.ConsoleRenderer,
-            log_level="DEBUG"
+            wrapper_class=structlog.make_filtering_bound_logger(logging.DEBUG),
+            processors=[structlog.dev.ConsoleRenderer()],
         )
 
     ctx.ensure_object(dict)

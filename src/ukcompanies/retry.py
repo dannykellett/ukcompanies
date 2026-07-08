@@ -85,7 +85,7 @@ def exponential_backoff(
     Returns:
         Delay in seconds before next retry
     """
-    delay = min(2**attempt * base_delay, max_delay)
+    delay: float = min(2**attempt * base_delay, max_delay)
     jitter = random.uniform(0, jitter_range)
     return delay + jitter
 
@@ -221,7 +221,7 @@ class RetryManager:
 
         while attempt <= self.config.max_retries:
             try:
-                response = await request_func(*args, **kwargs)
+                response: httpx.Response = await request_func(*args, **kwargs)
 
                 # If we get a response without exception, return it
                 return response
