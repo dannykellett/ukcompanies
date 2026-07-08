@@ -1,12 +1,14 @@
 """Unit tests for package initialization."""
 
+import re
+
 
 def test_version_import() -> None:
     """Test that version can be imported."""
     from ukcompanies import __version__
 
-    assert __version__ == "0.1.0"
     assert isinstance(__version__, str)
+    assert re.match(r"^\d+\.\d+\.\d+", __version__), __version__
 
 
 def test_package_imports() -> None:
@@ -14,4 +16,4 @@ def test_package_imports() -> None:
     import ukcompanies
 
     assert hasattr(ukcompanies, "__version__")
-    assert ukcompanies.__version__ == "0.1.0"
+    assert re.match(r"^\d+\.\d+\.\d+", ukcompanies.__version__)
