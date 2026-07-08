@@ -1,6 +1,6 @@
 [project]
 name = "ukcompanies"
-version = "0.7.0"
+version = "0.7.1"
 description = "A Python SDK for accessing UK Companies House API"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -31,9 +31,11 @@ dependencies = [
 ]
 
 [project.urls]
-homepage = "https://github.com/dkellett/ukcompanies"
-repository = "https://github.com/dkellett/ukcompanies"
-documentation = "https://github.com/dkellett/ukcompanies/tree/main/docs"
+Homepage = "https://github.com/dannykellett/ukcompanies"
+Repository = "https://github.com/dannykellett/ukcompanies"
+Documentation = "https://github.com/dannykellett/ukcompanies/tree/main/docs"
+Issues = "https://github.com/dannykellett/ukcompanies/issues"
+Changelog = "https://github.com/dannykellett/ukcompanies/blob/main/CHANGELOG.md"
 
 [project.optional-dependencies]
 dev = [
