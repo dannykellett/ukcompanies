@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.7.0] - 2026-07-08
+
 ### Added
 - Company charges endpoints: `list_charges()` for a company's registered charges (mortgages) with pagination, and `get_charge()` for a single charge by ID
 - `Charge` and `ChargeList` models (plus `ChargeStatus`, `ChargeClassification`, `ChargeParticulars`, `SecuredDetails`, `PersonEntitled`, `ChargeLinks`, `ChargeTransaction`, `TransactionLinks`, `InsolvencyCase`) covering the Companies House charges resource
