@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.7.1] - 2026-07-08
+
+### Fixed
+- Corrected project URLs in package metadata (were pointing at the wrong GitHub user); added Issues and Changelog links
+
 ## [0.7.0] - 2026-07-08
 
 ### Added
