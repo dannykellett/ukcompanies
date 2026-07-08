@@ -4,7 +4,7 @@ from datetime import date
 from enum import Enum
 from typing import Any
 
-from pydantic import Field, field_validator
+from pydantic import Field, ValidationInfo, field_validator
 
 from .address import Address
 from .base import BaseModel
@@ -62,7 +62,7 @@ class AccountingReference(BaseModel):
 
     @field_validator("day")
     @classmethod
-    def validate_day(cls, v: int | None, values: dict[str, Any]) -> int | None:
+    def validate_day(cls, v: int | None, info: ValidationInfo) -> int | None:
         """Validate day is valid for the month."""
         if v is None:
             return v

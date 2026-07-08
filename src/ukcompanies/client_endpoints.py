@@ -3,9 +3,14 @@
 import asyncio
 import random
 from collections.abc import AsyncGenerator, Callable
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import structlog
+
+if TYPE_CHECKING:
+    import httpx
+
+    from .config import Config
 
 from .exceptions import RateLimitError, ServerError, ValidationError
 from .models import Address, Company
@@ -22,6 +27,28 @@ logger = structlog.get_logger(__name__)
 
 class EndpointMixin:
     """Mixin class providing endpoint methods for AsyncClient."""
+
+    if TYPE_CHECKING:
+        # Attributes and methods supplied by the concrete AsyncClient this
+        # mixin is combined into. Declared for the type checker only; they do
+        # not exist at runtime on the mixin itself.
+        async def get(
+            self,
+            path: str,
+            params: dict[str, Any] | None = ...,
+            **kwargs: Any,
+        ) -> dict[str, Any]: ...
+
+        async def _request(
+            self,
+            method: str,
+            path: str,
+            params: dict[str, Any] | None = ...,
+            json: dict[str, Any] | None = ...,
+            **kwargs: Any,
+        ) -> "httpx.Response": ...
+
+        def validate_company_number(self, company_number: str) -> str: ...
 
     async def search_companies(
         self,
@@ -204,7 +231,7 @@ class EndpointMixin:
         # Validate and normalize company number
         normalized = self.validate_company_number(company_number)
 
-        params = {
+        params: dict[str, Any] = {
             "items_per_page": min(items_per_page, 50),
             "start_index": start_index,
         }
@@ -400,7 +427,7 @@ class EndpointMixin:
         # Validate and normalize company number
         normalized = self.validate_company_number(company_number)
 
-        params = {
+        params: dict[str, Any] = {
             "items_per_page": min(items_per_page, 100),
             "start_index": start_index,
         }
@@ -584,6 +611,7 @@ class EndpointMixin:
                 document_id=clean_id,
                 content_type=DocumentFormat.PDF,
                 content=response.content,
+                text_content=None,
                 content_length=len(response.content),
                 etag=response.headers.get("etag"),
             )
@@ -592,6 +620,7 @@ class EndpointMixin:
             return DocumentContent(
                 document_id=clean_id,
                 content_type=DocumentFormat.JSON,
+                content=None,
                 text_content=response.text,
                 content_length=len(response.text),
                 etag=response.headers.get("etag"),
@@ -601,6 +630,7 @@ class EndpointMixin:
             return DocumentContent(
                 document_id=clean_id,
                 content_type=DocumentFormat.CSV,
+                content=None,
                 text_content=response.text,
                 content_length=len(response.text),
                 etag=response.headers.get("etag"),
@@ -610,6 +640,7 @@ class EndpointMixin:
             return DocumentContent(
                 document_id=clean_id,
                 content_type=DocumentFormat.XHTML,
+                content=None,
                 text_content=response.text,
                 content_length=len(response.text),
                 etag=response.headers.get("etag"),
@@ -619,6 +650,7 @@ class EndpointMixin:
             return DocumentContent(
                 document_id=clean_id,
                 content_type=DocumentFormat.XML if "xml" in content_type else DocumentFormat.XHTML,
+                content=None,
                 text_content=response.text,
                 content_length=len(response.text),
                 etag=response.headers.get("etag"),
@@ -675,6 +707,21 @@ class EndpointMixin:
 
 class RetryMixin:
     """Mixin class providing retry logic for AsyncClient."""
+
+    if TYPE_CHECKING:
+        # Attributes and methods supplied by the concrete AsyncClient this
+        # mixin is combined into. Declared for the type checker only; they do
+        # not exist at runtime on the mixin itself.
+        config: "Config"
+
+        async def _request_without_retry(
+            self,
+            method: str,
+            path: str,
+            params: dict[str, Any] | None = ...,
+            json: dict[str, Any] | None = ...,
+            **kwargs: Any,
+        ) -> "httpx.Response": ...
 
     async def _request_with_retry(
         self,
