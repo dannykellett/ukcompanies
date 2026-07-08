@@ -83,14 +83,17 @@ jobs:
         version: ">=0.5.0"
     
     - name: Publish to TestPyPI
-      run: uv publish --publish-url https://test.pypi.org/legacy/ --token ${{ secrets.TEST_PYPI_API_TOKEN }} dist/*
+      run: uv publish --publish-url https://test.pypi.org/legacy/ --check-url https://test.pypi.org/simple/ --token ${{ secrets.TEST_PYPI_API_TOKEN }} dist/*
     
     - name: Test installation from TestPyPI
       run: |
         python -m venv test_env
         source test_env/bin/activate
         VERSION="${GITHUB_REF_NAME#v}"
-        pip install --index-url https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple/ "ukcompanies==${VERSION}"
+        for i in $(seq 1 12); do
+          pip install --index-url https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple/ "ukcompanies==${VERSION}" && break
+          echo "TestPyPI index not propagated yet (attempt $i); retrying in 15s..."; sleep 15
+        done
         python -c "import ukcompanies; print(f'Version: {ukcompanies.__version__}')"
         python -m ukcompanies --help
 
@@ -114,13 +117,16 @@ jobs:
         version: ">=0.5.0"
     
     - name: Publish to PyPI
-      run: uv publish --token ${{ secrets.PYPI_API_TOKEN }} dist/*
+      run: uv publish --check-url https://pypi.org/simple/ --token ${{ secrets.PYPI_API_TOKEN }} dist/*
     
     - name: Test installation from PyPI
       run: |
         python -m venv test_env
         source test_env/bin/activate
         VERSION="${GITHUB_REF_NAME#v}"
-        pip install "ukcompanies==${VERSION}"
+        for i in $(seq 1 12); do
+          pip install "ukcompanies==${VERSION}" && break
+          echo "PyPI index not propagated yet (attempt $i); retrying in 15s..."; sleep 15
+        done
         python -c "import ukcompanies; print(f'Version: {ukcompanies.__version__}')"
         python -m ukcompanies --help
