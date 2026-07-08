@@ -15,6 +15,8 @@ from .exceptions import (
 from .models import (
     Address,
     BaseModel,
+    Charge,
+    ChargeList,
     Company,
     CompanySearchResult,
     OfficerSearchResult,
@@ -32,6 +34,8 @@ __all__ = [
     # Models
     "BaseModel",
     "Address",
+    "Charge",
+    "ChargeList",
     "Company",
     "CompanySearchResult",
     "OfficerSearchResult",

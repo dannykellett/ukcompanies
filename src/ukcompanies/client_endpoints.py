@@ -10,6 +10,7 @@ import structlog
 from .exceptions import RateLimitError, ServerError, ValidationError
 from .models import Address, Company
 from .models.appointment import AppointmentList
+from .models.charge import Charge, ChargeList
 from .models.disqualification import DisqualificationList
 from .models.document import Document, DocumentContent, DocumentFormat, DocumentMetadata
 from .models.filing import FilingCategory, FilingHistoryList, FilingTransaction
@@ -444,6 +445,67 @@ class EndpointMixin:
 
         response = await self.get(f"/company/{normalized}/filing-history/{clean_id}")
         return FilingTransaction(**response)
+
+    async def list_charges(
+        self,
+        company_number: str,
+        items_per_page: int = 25,
+        start_index: int = 0,
+    ) -> ChargeList:
+        """List the charges (mortgages) registered against a company.
+
+        Args:
+            company_number: Company registration number
+            items_per_page: Number of items per page (max 100)
+            start_index: Starting index for pagination
+
+        Returns:
+            ChargeList with the company's charges
+
+        Raises:
+            ValidationError: If company number is invalid
+            NotFoundError: If company doesn't exist
+        """
+        # Validate and normalize company number
+        normalized = self.validate_company_number(company_number)
+
+        params = {
+            "items_per_page": min(items_per_page, 100),
+            "start_index": start_index,
+        }
+
+        response = await self.get(f"/company/{normalized}/charges", params=params)
+        return ChargeList(**response)
+
+    async def get_charge(
+        self,
+        company_number: str,
+        charge_id: str,
+    ) -> Charge:
+        """Get details of a single charge registered against a company.
+
+        Args:
+            company_number: Company registration number
+            charge_id: Unique charge identifier
+
+        Returns:
+            Charge with detailed charge information
+
+        Raises:
+            ValidationError: If company number or charge ID is invalid
+            NotFoundError: If company or charge doesn't exist
+        """
+        # Validate and normalize company number
+        normalized = self.validate_company_number(company_number)
+
+        # Validate charge ID
+        if not charge_id or not charge_id.strip():
+            raise ValidationError("Charge ID cannot be empty")
+
+        clean_id = charge_id.strip()
+
+        response = await self.get(f"/company/{normalized}/charges/{clean_id}")
+        return Charge(**response)
 
     async def document(self, document_id: str) -> Document:
         """Get document metadata.

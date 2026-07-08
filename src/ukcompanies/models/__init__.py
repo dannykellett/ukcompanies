@@ -4,6 +4,19 @@ from .address import Address
 from .appointment import Appointment, AppointmentList
 from .appointment import CompanyStatus as AppointmentCompanyStatus
 from .base import BaseModel
+from .charge import (
+    Charge,
+    ChargeClassification,
+    ChargeLinks,
+    ChargeList,
+    ChargeParticulars,
+    ChargeStatus,
+    ChargeTransaction,
+    InsolvencyCase,
+    PersonEntitled,
+    SecuredDetails,
+    TransactionLinks,
+)
 from .company import (
     AccountingReference,
     Accounts,
@@ -50,6 +63,18 @@ __all__ = [
     "AccountingReference",
     "ConfirmationStatement",
     "Accounts",
+    # Charge
+    "Charge",
+    "ChargeList",
+    "ChargeStatus",
+    "ChargeClassification",
+    "ChargeParticulars",
+    "SecuredDetails",
+    "PersonEntitled",
+    "ChargeLinks",
+    "ChargeTransaction",
+    "TransactionLinks",
+    "InsolvencyCase",
     # Officer
     "Officer",
     "OfficerList",
