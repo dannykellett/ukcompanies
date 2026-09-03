@@ -215,7 +215,7 @@ class RetryManager:
         Raises:
             RateLimitError: When max retries exceeded
         """
-        from .exceptions import NetworkError, RateLimitError
+        from .exceptions import NetworkError, RateLimitError, ServerError
 
         attempt = 0
 
@@ -263,12 +263,12 @@ class RetryManager:
                 await asyncio.sleep(wait_time)
                 attempt += 1
 
-            except (httpx.HTTPError, NetworkError) as exc:
-                # Network errors during retry
-                if attempt >= self.config.max_retries:
+            except (httpx.HTTPError, NetworkError, ServerError) as exc:
+                # Network/5xx errors during retry
+                if not self.config.auto_retry or attempt >= self.config.max_retries:
                     raise
                 logger.warning(
-                    "Network error during request, retrying",
+                    "Network or server error during request, retrying",
                     error=str(exc),
                     attempt=attempt + 1,
                 )
